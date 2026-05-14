@@ -1,0 +1,22 @@
+.admin-table {
+  border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+}
+.admin-header, .admin-row {
+  display: grid; grid-template-columns: 160px 1fr 100px 120px 80px;
+  padding: 12px 16px; font-size: 0.85rem; align-items: center;
+}
+.admin-header {
+  background: var(--surface); font-weight: 700; font-size: 0.75rem;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+}
+.admin-row { border-top: 1px solid var(--border); }
+.token-value {
+  font-family: monospace; font-size: 0.85rem; color: var(--accent);
+  cursor: pointer;
+}
+.token-value:hover { text-decoration: underline; }
+@media (max-width: 768px) {
+  .admin-header, .admin-row { grid-template-columns: 1fr 1fr 80px; }
+  .admin-header span:nth-child(4), .admin-row span:nth-child(4),
+  .admin-header span:nth-child(2), .admin-row span:nth-child(2) { display: none; }
+}

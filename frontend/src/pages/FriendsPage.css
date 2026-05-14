@@ -1,0 +1,8 @@
+.friends-tabs { display: flex; gap: 4px; background: var(--card); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 20px; max-width: 500px; }
+.friends-grid { display: flex; flex-direction: column; gap: 12px; }
+.friend-card { display: flex; align-items: center; justify-content: space-between; }
+.friend-info { display: flex; align-items: center; gap: 12px; }
+.friend-tier { font-size: 1.5rem; }
+.friend-name { font-weight: 700; font-size: 0.95rem; }
+.friend-rp { font-size: 0.8rem; font-weight: 600; }
+.friend-actions { display: flex; gap: 8px; }

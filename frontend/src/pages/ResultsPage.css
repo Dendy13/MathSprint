@@ -1,0 +1,49 @@
+.results-card {
+  width: 100%; max-width: 520px; text-align: center;
+}
+.results-stars { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; }
+.star { font-size: 48px; animation: popIn 0.4s ease-out both; }
+.results-message { margin-bottom: 4px; }
+.breakdown {
+  margin: 24px 0; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px; text-align: left;
+}
+.breakdown-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; font-size: 0.9rem;
+}
+.breakdown-row.total { font-size: 1.1rem; font-weight: 900; }
+.breakdown-divider { height: 1px; background: var(--border); margin: 8px 0; }
+.score-final {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 2rem; color: var(--accent);
+}
+.review-section { margin: 24px 0; text-align: left; }
+.review-table { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.review-header, .review-row {
+  display: grid; grid-template-columns: 30px 1fr 80px 80px 30px;
+  padding: 10px 12px; font-size: 0.85rem; align-items: center;
+}
+.review-header {
+  background: var(--surface); font-weight: 700; color: var(--muted);
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+}
+.review-row { border-top: 1px solid var(--border); }
+.review-row.wrong { background: rgba(248,113,113,0.05); }
+.review-row.correct { background: rgba(74,222,128,0.03); }
+.results-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 24px; }
+.rp-change-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 24px;
+  margin-bottom: 24px;
+}
+.rp-side { display: flex; flex-direction: column; align-items: center; }
+.rp-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.rp-value { font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; }
+.rp-arrow { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.rp-arrow .arrow { font-size: 1.5rem; font-weight: bold; }
+.rp-arrow .arrow.up { color: var(--green); }
+.rp-arrow .arrow.down { color: var(--red); }
+.rp-arrow .arrow.neutral { color: var(--muted); }
+.rp-diff { font-weight: 800; font-size: 0.9rem; }

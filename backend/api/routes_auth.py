@@ -1,0 +1,178 @@
+"""
+MathSprint — Auth API Routes
+==============================
+Endpoints for user registration, login, and profile management.
+
+POST /auth/register  — Create new account (user/teacher)
+POST /auth/login     — Login (returns Firebase ID token info)
+GET  /auth/profile   — Get current user profile
+PUT  /auth/profile   — Update display name
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from core.auth_engine import create_player_profile, get_player
+from models.auth import AuthError, LoginRequest
+from models.player import (
+    AccountType,
+    PlayerCreate,
+    PlayerProfile,
+    PlayerPublic,
+    PlayerUpdate,
+)
+from services.auth_service import (
+    get_current_uid,
+    get_current_user_token,
+    register_firebase_user,
+)
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+@router.post(
+    "/register",
+    response_model=PlayerProfile,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrasi akun baru",
+    description=(
+        "Buat akun baru. Untuk akun tipe 'teacher', "
+        "field teacher_token WAJIB diisi dengan token yang valid dari Developer."
+    ),
+    responses={
+        400: {"model": AuthError, "description": "Data registrasi tidak valid"},
+        409: {"model": AuthError, "description": "Email sudah terdaftar"},
+    },
+)
+async def register(data: PlayerCreate):
+    """
+    Registrasi akun baru.
+
+    - **user**: Registrasi biasa tanpa token
+    - **teacher**: Wajib menyertakan teacher_token yang valid
+    - **developer**: Tidak bisa dibuat melalui endpoint ini
+    """
+    try:
+        # Create Firebase Auth user
+        uid = await register_firebase_user(
+            email=data.email,
+            password=data.password,
+            display_name=data.display_name,
+            account_type=data.account_type,
+        )
+
+        # Create player profile in engine (validates teacher token, etc.)
+        profile = create_player_profile(uid=uid, data=data)
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "EMAIL_EXISTS" in error_msg.upper():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email sudah terdaftar. Gunakan email lain atau login.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Gagal membuat akun: {error_msg}",
+        )
+
+
+@router.post(
+    "/login",
+    summary="Login (info saja)",
+    description=(
+        "Endpoint ini hanya sebagai referensi. "
+        "Login sebenarnya dilakukan di client-side menggunakan Firebase Auth SDK. "
+        "Client mengirim email+password ke Firebase Auth, mendapat ID token, "
+        "lalu gunakan token tersebut di header Authorization untuk endpoint lain."
+    ),
+)
+async def login(data: LoginRequest):
+    """
+    Login dilakukan di client-side via Firebase Auth SDK.
+    Endpoint ini hanya mengembalikan instruksi.
+    """
+    return {
+        "message": "Login dilakukan di client-side menggunakan Firebase Auth SDK.",
+        "instructions": {
+            "step_1": "Gunakan Firebase Auth SDK di client untuk sign in dengan email & password",
+            "step_2": "Dapatkan ID token dari Firebase Auth",
+            "step_3": "Sertakan ID token di header: Authorization: Bearer <id_token>",
+            "step_4": "Gunakan header tersebut untuk semua request ke API yang membutuhkan autentikasi",
+        },
+        "docs": "https://firebase.google.com/docs/auth/web/password-auth",
+    }
+
+
+@router.get(
+    "/profile",
+    response_model=PlayerProfile,
+    summary="Profil user saat ini",
+    description="Ambil profil lengkap user yang sedang login.",
+)
+async def get_profile(uid: str = Depends(get_current_uid)):
+    """Ambil profil user berdasarkan token autentikasi."""
+    profile = get_player(uid)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profil tidak ditemukan. Pastikan akun sudah terdaftar.",
+        )
+    return profile
+
+
+@router.put(
+    "/profile",
+    response_model=PlayerProfile,
+    summary="Update profil",
+    description="Update display name user yang sedang login.",
+)
+async def update_profile(
+    data: PlayerUpdate,
+    uid: str = Depends(get_current_uid),
+):
+    """Update profil user. Saat ini hanya display_name yang bisa diubah."""
+    from core.auth_engine import update_player
+
+    profile = update_player(uid, display_name=data.display_name)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profil tidak ditemukan.",
+        )
+    return profile
+
+
+@router.get(
+    "/profile/{uid}",
+    response_model=PlayerPublic,
+    summary="Profil publik pemain lain",
+    description="Ambil profil publik pemain berdasarkan UID (tanpa data sensitif).",
+)
+async def get_public_profile(
+    uid: str,
+    _current_uid: str = Depends(get_current_uid),
+):
+    """Ambil profil publik pemain lain."""
+    profile = get_player(uid)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pemain tidak ditemukan.",
+        )
+    return PlayerPublic(
+        uid=profile.uid,
+        display_name=profile.display_name,
+        account_type=profile.account_type,
+        current_rank_point=profile.current_rank_point,
+        total_matches=profile.total_matches,
+        wins=profile.wins,
+        losses=profile.losses,
+        learning_streak_days=profile.learning_streak_days,
+    )
