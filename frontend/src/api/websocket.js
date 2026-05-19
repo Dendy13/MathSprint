@@ -14,7 +14,7 @@ export class GameWebSocket {
     // Determine WS protocol based on HTTP protocol
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Use the backend URL from env or fallback to local port 8080
-    const host = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/^https?:\/\//, '') : 'localhost:8080';
+    const host = import.meta.env.VITE_BACKEND_URL ? import.meta.env.VITE_BACKEND_URL.replace(/^https?:\/\//, '') : 'localhost:8080';
     
     const wsUrl = `${protocol}//${host}/api/v1/game/ws/${this.roomId}?token=${this.token}`;
     

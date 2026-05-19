@@ -41,7 +41,4 @@ steps:
       - '--quiet'
 
 substitutions:
-  _REGION: asia-southeast2   # Jakarta
-
-options:
-  logging: CLOUD_LOGGING_ONLY
+  _REGION: 'asia-southeast2'
