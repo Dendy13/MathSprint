@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { register } from '../api/auth.js';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../config/firebase.js';
+import { register, getProfile } from '../api/auth.js';
+import { setAuthToken } from '../api/client.js';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -20,22 +23,31 @@ export default function LoginPage() {
       if (mode === 'register') {
         const data = { display_name: form.display_name, email: form.email, password: form.password, account_type: form.account_type };
         if (form.account_type === 'teacher') data.teacher_token = form.teacher_token;
-        const profile = await register(data);
-        login(profile);
-      } else {
-        // Mock login — in production use Firebase Auth SDK
-        login({
-          uid: 'mock-' + Date.now(),
-          display_name: form.email.split('@')[0] || 'Player',
-          email: form.email,
-          account_type: 'user',
-          current_rank_point: 1200,
-          total_matches: 0, wins: 0, losses: 0,
-          learning_streak_days: 0, friends_list: [],
-        });
+        // Register in backend (which creates Firebase user)
+        await register(data);
       }
+      
+      // Sign in with Firebase (for both login and after register)
+      const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+      
+      // Get the real Firebase ID Token
+      const token = await userCredential.user.getIdToken();
+      
+      // Set token in API client so getProfile can use it
+      setAuthToken(token);
+      
+      // Fetch the full profile from backend
+      const profile = await getProfile();
+      
+      // Update Context & LocalStorage
+      login(profile, token);
+      
     } catch (err) {
-      setError(err.message);
+      if (err.code === 'auth/invalid-credential') {
+        setError('Email atau password salah');
+      } else {
+        setError(err.message || 'Gagal masuk. Periksa kembali data kamu.');
+      }
     } finally {
       setLoading(false);
     }

@@ -14,9 +14,5 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-// uncomment these once firebase is installed and env is setup
-// export const app = initializeApp(firebaseConfig);
-// export const auth = getAuth(app);
-
-export const app = null;
-export const auth = null;
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
