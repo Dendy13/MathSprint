@@ -35,7 +35,7 @@ export default function Navbar() {
           ))}
         </div>
         <div className="navbar-user">
-          <div className="user-badge">
+          <Link to="/profile" className="user-badge" style={{ textDecoration: 'none', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'} onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}>
             <span className="user-tier">{tier.emoji}</span>
             <div className="user-info">
               <span className="user-name">{user.display_name}</span>
@@ -43,7 +43,7 @@ export default function Navbar() {
                 {formatRP(user.current_rank_point || 1200)} RP
               </span>
             </div>
-          </div>
+          </Link>
           <span className="badge badge-accent" style={{ fontSize: '0.65rem' }}>
             {ACCOUNT_LABELS[user.account_type] || 'Pemain'}
           </span>

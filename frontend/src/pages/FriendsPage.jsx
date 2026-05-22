@@ -109,6 +109,7 @@ export default function FriendsPage() {
           <div className="input-group">
             <label className="input-label">UID Pemain</label>
             <input className="input" placeholder="Masukkan UID pemain" value={searchUid} onChange={e => setSearchUid(e.target.value)} id="input-friend-uid" />
+            <span className="game-hint" style={{ marginTop: '8px', display: 'block' }}>Minta temanmu untuk menyalin UID mereka dari halaman Profil.</span>
           </div>
           <button className="btn btn-primary btn-full" onClick={handleSendRequest} id="btn-send-request">Kirim Permintaan</button>
         </div>
