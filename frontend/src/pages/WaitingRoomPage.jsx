@@ -95,19 +95,25 @@ export default function WaitingRoomPage() {
   const isHost = user?.uid === room.host_uid;
   const canStart = isHost && room.player_count >= 2;
 
-  // Render dummy players to show empty slots
+  // Get players array from the dictionary
+  const playersList = room.players ? Object.values(room.players) : [];
+  
+  // Render slots
   const slots = [];
   for (let i = 0; i < room.max_players; i++) {
-    const isFilled = i < room.player_count;
+    const isFilled = i < playersList.length;
+    const player = isFilled ? playersList[i] : null;
+    const isHostPlayer = player?.uid === room.host_uid;
+    
     slots.push(
-      <div key={i} className={`player-card ${isFilled && i === 0 ? 'host' : ''}`}>
+      <div key={i} className={`player-card ${isHostPlayer ? 'host' : ''}`}>
         {isFilled ? (
           <>
             <div className="player-avatar">👤</div>
             <div className="player-info">
               <div className="player-name">
-                {i === 0 ? 'Host Room' : `Pemain ${i + 1}`}
-                {i === 0 && <span className="host-badge">HOST</span>}
+                {player.display_name}
+                {isHostPlayer && <span className="host-badge">HOST</span>}
               </div>
               <div className="text-muted" style={{ fontSize: '0.85rem' }}>Siap Bertanding</div>
             </div>

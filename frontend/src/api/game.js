@@ -3,9 +3,9 @@ export const getQuestion = (op, diff) => get(`/game/question?op=${op}&diff=${dif
 export const getQuestionStack = (data) => post('/game/questions', data);
 export const createRoom = (data) => post('/game/room/create', data);
 export const joinRoom = (roomId) => post(`/game/room/join/${roomId}`);
-export const getRoomInfo = (roomId) => get(`/game/room/${roomId}`);
+export const getRoomInfo = (roomId) => get(`/game/room/${roomId}?_t=${Date.now()}`);
 export const startGame = (roomId) => post(`/game/room/${roomId}/start`);
 export const submitAnswer = (roomId, data) => post(`/game/room/${roomId}/answer`, data);
 export const getRoomQuestions = (roomId) => get(`/game/room/${roomId}/questions`);
-export const getWaitingRooms = () => get('/game/rooms');
+export const getWaitingRooms = () => get(`/game/rooms?_t=${Date.now()}`);
 export const leaveRoom = (roomId) => post(`/game/room/${roomId}/leave`);
