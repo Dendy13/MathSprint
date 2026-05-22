@@ -189,6 +189,39 @@ async def get_room_info(
     return get_room_summary(room)
 
 
+@router.get(
+    "/room/{room_id}/questions",
+    response_model=list[MathQuestion],
+    summary="Ambil soal room",
+    description="Ambil seluruh soal untuk room ini (hanya jika game sudah dimulai).",
+)
+async def get_room_questions(
+    room_id: str,
+    uid: str = Depends(get_current_uid),
+):
+    from models.room import RoomStatus
+    room = get_room(room_id.upper())
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Room '{room_id}' tidak ditemukan.",
+        )
+    
+    if uid not in room.players:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Kamu bukan peserta room ini.",
+        )
+        
+    if room.status == RoomStatus.WAITING:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Game belum dimulai, soal masih dirahasiakan.",
+        )
+        
+    return room.question_stack
+
+
 @router.post(
     "/room/{room_id}/start",
     response_model=RoomSummary,
