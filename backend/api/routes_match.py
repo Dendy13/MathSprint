@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.rank_engine import process_match_result
 from core.room_engine import get_room
-from models.match import LeaderboardEntry, MatchHistory, MatchResult, MatchSubmission
+from models.match import LeaderboardEntry, MatchHistory, MatchResult, MatchSubmission, SoloMatchSubmission, SoloMatchResult
 from models.room import RoomStatus
 from services.auth_service import get_current_uid
 from core.auth_engine import get_player, update_player
@@ -91,6 +91,48 @@ async def submit_match(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.post(
+    "/submit-solo",
+    response_model=SoloMatchResult,
+    summary="Submit hasil match Solo",
+    description="Simpan hasil mode Solo dan update profil statistik pemain secara permanen.",
+)
+async def submit_solo_match(
+    data: SoloMatchSubmission,
+    uid: str = Depends(get_current_uid),
+):
+    from core.rank_engine import process_solo_match
+    
+    player = get_player(uid)
+    if player is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profil tidak ditemukan.",
+        )
+
+    result = process_solo_match(player, data)
+    
+    # Update player profile
+    updates = {
+        "current_rank_point": result.new_rp,
+        "total_matches": player.total_matches + 1,
+    }
+    
+    # Calculate win/loss based on passing grade (e.g., > 50% correct is a win)
+    is_win = result.correct > (result.total / 2)
+    if is_win:
+        updates["wins"] = player.wins + 1
+    else:
+        updates["losses"] = player.losses + 1
+        
+    update_player(uid, **updates)
+    
+    # Save match history (mock array for now)
+    # _match_history.append(...)
+    
+    return result
 
 
 @router.get(

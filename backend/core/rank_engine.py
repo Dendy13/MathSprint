@@ -218,3 +218,54 @@ def process_match_result(
         elo_wager=room.config.elo_wager,
         created_at=datetime.utcnow(),
     )
+
+
+def process_solo_match(player: PlayerProfile, submission: 'SoloMatchSubmission') -> 'SoloMatchResult':
+    """
+    Kalkulasi RP untuk mode Solo.
+    Logika penilaian:
+    - Base RP = + (benar) dan - (salah) berdasarkan difficulty.
+    - Combo Bonus = max_streak * multiplier
+    """
+    from models.match import SoloMatchResult
+    
+    # Base points based on difficulty
+    if submission.diff == Difficulty.EASY:
+        base_correct = 2
+        base_wrong = 1
+        combo_mult = 1
+    elif submission.diff == Difficulty.MEDIUM:
+        base_correct = 3
+        base_wrong = 2
+        combo_mult = 2
+    else:  # HARD
+        base_correct = 5
+        base_wrong = 3
+        combo_mult = 3
+
+    points_gained = submission.correct * base_correct
+    points_lost = submission.wrong * base_wrong
+    combo_bonus = submission.max_streak * combo_mult
+    
+    rp_change = points_gained - points_lost + combo_bonus
+    
+    # Cap negative RP change at -15 to be safe (don't punish too hard in solo)
+    if rp_change < -15:
+        rp_change = -15
+        
+    old_rp = player.current_rank_point
+    new_rp = max(0, old_rp + rp_change)
+    
+    match_id = str(uuid.uuid4())
+    
+    return SoloMatchResult(
+        match_id=match_id,
+        player_uid=player.uid,
+        old_rp=old_rp,
+        new_rp=new_rp,
+        rp_change=rp_change,
+        correct=submission.correct,
+        wrong=submission.wrong,
+        total=submission.total,
+        max_streak=submission.max_streak,
+    )

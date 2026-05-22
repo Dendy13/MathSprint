@@ -104,6 +104,31 @@ class MatchSubmission(BaseModel):
     room_id: str = Field(..., description="Room ID yang matchnya selesai")
 
 
+class SoloMatchSubmission(BaseModel):
+    """Hasil akhir dari permainan mode Solo."""
+    op: MathOperation = Field(..., description="Operasi matematika")
+    diff: Difficulty = Field(..., description="Tingkat kesulitan")
+    correct: int = Field(..., description="Jumlah jawaban benar")
+    wrong: int = Field(..., description="Jumlah jawaban salah")
+    total: int = Field(..., description="Total soal")
+    max_streak: int = Field(..., description="Combo tertinggi")
+    elapsed_seconds: int = Field(..., description="Waktu pengerjaan")
+
+
+class SoloMatchResult(BaseModel):
+    """Hasil dari kalkulasi rank point mode Solo."""
+    match_id: str
+    player_uid: str
+    old_rp: int
+    new_rp: int
+    rp_change: int
+    correct: int
+    wrong: int
+    total: int
+    max_streak: int
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class MatchHistory(BaseModel):
     """Satu entry di riwayat pertandingan pemain."""
     match_id: str

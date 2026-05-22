@@ -107,7 +107,7 @@ export default function GamePage() {
     }
   };
 
-  const finishGame = (finalAnswers) => {
+  const finishGame = async (finalAnswers) => {
     timer.stop();
     setPhase('finished');
     const ans = finalAnswers || answersRef.current;
@@ -115,13 +115,24 @@ export default function GamePage() {
     const wrong = ans.filter((a, i) => a !== null && a !== questions[i]?.answer).length;
     const elapsed = timer.getElapsedMs();
     
-    // Simulate Rank Point change
-    const oldRp = user?.current_rank_point || 1200;
-    const rpChange = correct >= Math.ceil(questions.length * 0.7) ? 25 : correct >= Math.ceil(questions.length * 0.4) ? 5 : -15;
-    const newRp = Math.max(0, oldRp + rpChange);
-    
+    let oldRp = user?.current_rank_point || 1200;
+    let newRp = oldRp;
+    let rpChange = 0;
+
     if (user) {
-      updateUser({ current_rank_point: newRp, total_matches: (user.total_matches || 0) + 1 });
+      try {
+        const { submitSoloMatch } = await import('../api/match.js');
+        const res = await submitSoloMatch({
+          op, diff, correct, wrong, total: questions.length,
+          max_streak: maxStreakRef.current, elapsed_seconds: Math.floor(elapsed / 1000)
+        });
+        oldRp = res.old_rp;
+        newRp = res.new_rp;
+        rpChange = res.rp_change;
+        updateUser({ current_rank_point: newRp, total_matches: (user.total_matches || 0) + 1 });
+      } catch (err) {
+        console.error("Gagal submit match:", err);
+      }
     }
 
     const resultsData = { op, diff, correct, wrong, total: questions.length, maxStreak: maxStreakRef.current, elapsed, questions, answers: ans, oldRp, newRp, rpChange };
