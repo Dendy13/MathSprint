@@ -187,11 +187,19 @@ export default function GamePage() {
 
       {/* Question */}
       <div className="game-main">
-        {streak >= 3 && (
-          <div className="streak-display animate-pop-in" key={streak}>
-            🔥 Combo ×{streak}!
-          </div>
-        )}
+        <div 
+          className="streak-display" 
+          key="streak-badge"
+          style={{ 
+            opacity: streak >= 3 ? 1 : 0, 
+            transform: streak >= 3 ? 'scale(1)' : 'scale(0.8)',
+            transition: 'all 0.2s ease-out',
+            pointerEvents: 'none',
+            marginBottom: streak >= 3 ? '0' : '-32px'
+          }}
+        >
+          {streak >= 3 ? `🔥 Combo ×${streak}!` : '\u00A0'}
+        </div>
 
         {q && (
           <div className="question-display animate-fade-in" key={currentIdx}>
