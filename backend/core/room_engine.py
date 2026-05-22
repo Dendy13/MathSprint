@@ -1,7 +1,7 @@
 """
-MathSprint — Room & Multiplayer State Engine
+MathSprint — Room & Multiplayer State Engine (Firestore)
 ==============================================
-Module C: Manages room lifecycle, player state, and game synchronization.
+Module C: Manages room lifecycle, player state, and game synchronization using Firestore.
 
 Room Lifecycle: WAITING → PLAYING → FINISHED
 """
@@ -15,7 +15,7 @@ from models.player import PlayerProfile
 from models.room import (
     Room, RoomConfig, RoomPlayer, RoomStatus, RoomSummary,
 )
-from services.firebase_client import get_firestore_client
+from services.firebase_client import get_db
 
 # Room code chars — exclude confusing: 0, O, I, 1, L
 _ROOM_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -27,30 +27,21 @@ def _generate_room_code() -> str:
 
 
 def _get_unique_room_code(max_retries: int = 10) -> str:
-    """Generate a room code that doesn't collide with existing rooms."""
-    db = get_firestore_client()
+    """Generate a room code that doesn't collide with existing rooms in Firestore."""
+    db = get_db()
     for _ in range(max_retries):
         code = _generate_room_code()
-        if not db.collection("rooms").document(code).get().exists:
+        doc = db.collection("rooms").document(code).get()
+        if not doc.exists:
             return code
     raise RuntimeError(f"Gagal generate kode room unik setelah {max_retries} percobaan.")
 
 
-def get_room(room_id: str) -> Optional[Room]:
-    """Ambil data room berdasarkan ID dari Firestore."""
-    db = get_firestore_client()
-    doc = db.collection("rooms").document(room_id).get()
-    if doc.exists:
-        return Room(**doc.to_dict())
-    return None
-
-
 def initialize_room(host: PlayerProfile, config: RoomConfig) -> Room:
     """
-    Buat room baru. Host otomatis menjadi pemain pertama.
+    Buat room baru di Firestore. Host otomatis menjadi pemain pertama.
     question_stack BELUM di-generate (di-generate saat start_game).
     """
-    db = get_firestore_client()
     room_id = _get_unique_room_code()
     host_player = RoomPlayer(
         uid=host.uid,
@@ -67,13 +58,23 @@ def initialize_room(host: PlayerProfile, config: RoomConfig) -> Room:
         max_players=2,
         created_at=datetime.utcnow(),
     )
+    
+    db = get_db()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return room
 
 
+def get_room(room_id: str) -> Optional[Room]:
+    """Ambil data room dari Firestore."""
+    db = get_db()
+    doc = db.collection("rooms").document(room_id).get()
+    if not doc.exists:
+        return None
+    return Room(**doc.to_dict())
+
+
 def join_room(room_id: str, player: PlayerProfile) -> Room:
-    """Pemain bergabung ke room yang sudah ada."""
-    db = get_firestore_client()
+    """Pemain bergabung ke room yang sudah ada di Firestore."""
     room = get_room(room_id)
     if room is None:
         raise ValueError(f"Room '{room_id}' tidak ditemukan")
@@ -90,6 +91,8 @@ def join_room(room_id: str, player: PlayerProfile) -> Room:
         rp_before=player.current_rank_point,
     )
     room.players[player.uid] = new_player
+    
+    db = get_db()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return room
 
@@ -99,7 +102,6 @@ def start_game(room_id: str, requester_uid: str) -> Room:
     Mulai game di room. HANYA host yang boleh memulai.
     question_stack di-generate di sini agar kedua pemain dapat soal identik.
     """
-    db = get_firestore_client()
     room = get_room(room_id)
     if room is None:
         raise ValueError(f"Room '{room_id}' tidak ditemukan")
@@ -118,6 +120,8 @@ def start_game(room_id: str, requester_uid: str) -> Room:
     room.question_stack = stack.questions
     room.status = RoomStatus.PLAYING
     room.started_at = datetime.utcnow()
+    
+    db = get_db()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return room
 
@@ -125,8 +129,7 @@ def start_game(room_id: str, requester_uid: str) -> Room:
 def submit_answer(
     room_id: str, player_uid: str, question_index: int, answer: int,
 ) -> RoomPlayer:
-    """Submit jawaban pemain untuk satu soal di room."""
-    db = get_firestore_client()
+    """Submit jawaban pemain untuk satu soal di room Firestore."""
     room = get_room(room_id)
     if room is None:
         raise ValueError(f"Room '{room_id}' tidak ditemukan")
@@ -160,6 +163,7 @@ def submit_answer(
         room.status = RoomStatus.FINISHED
         room.finished_at = datetime.utcnow()
 
+    db = get_db()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return player
 
@@ -179,8 +183,7 @@ def get_room_summary(room: Room) -> RoomSummary:
 
 
 def leave_room(room_id: str, player_uid: str) -> Optional[Room]:
-    """Pemain keluar dari room. Room dihapus jika kosong."""
-    db = get_firestore_client()
+    """Pemain keluar dari room Firestore. Room dihapus jika kosong."""
     room = get_room(room_id)
     if room is None:
         raise ValueError(f"Room '{room_id}' tidak ditemukan")
@@ -190,6 +193,8 @@ def leave_room(room_id: str, player_uid: str) -> Optional[Room]:
         raise ValueError("Tidak bisa keluar saat game berlangsung")
 
     del room.players[player_uid]
+    db = get_db()
+    
     if len(room.players) == 0:
         db.collection("rooms").document(room_id).delete()
         return None
@@ -202,14 +207,8 @@ def leave_room(room_id: str, player_uid: str) -> Optional[Room]:
 
 
 def list_waiting_rooms() -> list[RoomSummary]:
-    """Daftar semua room yang menunggu pemain."""
-    db = get_firestore_client()
-    docs = db.collection("rooms").where("status", "==", RoomStatus.WAITING.value).stream()
-    rooms = []
-    for doc in docs:
-        try:
-            r = Room(**doc.to_dict())
-            rooms.append(get_room_summary(r))
-        except Exception:
-            pass
-    return rooms
+    """Daftar semua room yang menunggu pemain dari Firestore."""
+    db = get_db()
+    docs = db.collection("rooms").where("status", "==", RoomStatus.WAITING.value).get()
+    rooms = [Room(**doc.to_dict()) for doc in docs]
+    return [get_room_summary(room) for room in rooms]

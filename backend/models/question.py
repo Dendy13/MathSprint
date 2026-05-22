@@ -43,6 +43,8 @@ class MathQuestion(BaseModel):
     num2: int = Field(..., description="Angka kedua")
     op: MathOperation = Field(..., description="Operasi: add, sub, mul, div")
     answer: int = Field(..., description="Jawaban yang benar")
+    
+    model_config = {"use_enum_values": True}
 
 
 class QuestionRequest(BaseModel):

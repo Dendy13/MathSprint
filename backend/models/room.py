@@ -52,6 +52,8 @@ class RoomConfig(BaseModel):
         description="Batas waktu per sesi dalam detik"
     )
 
+    model_config = {"use_enum_values": True}
+
 
 class RoomPlayer(BaseModel):
     """
@@ -128,6 +130,8 @@ class Room(BaseModel):
         default=None,
         description="Waktu game selesai"
     )
+    
+    model_config = {"use_enum_values": True}
 
 
 class RoomCreate(BaseModel):
@@ -159,6 +163,8 @@ class RoomSummary(BaseModel):
     max_players: int
     created_at: datetime
     players: Dict[str, RoomPlayer] = Field(default_factory=dict)
+    
+    model_config = {"use_enum_values": True}
 
 
 class AnswerSubmission(BaseModel):

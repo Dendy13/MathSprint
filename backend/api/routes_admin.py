@@ -134,14 +134,15 @@ async def get_system_stats(
     token: dict = Depends(require_developer),
 ):
     from services.firebase_client import get_firestore_client
-    from datetime import datetime
+    from core.room_engine import _rooms
     
+    active_rooms = sum(
+        1 for r in _rooms.values()
+        if r.status.value in ("waiting", "playing")
+    )
+
     db = get_firestore_client()
     
-    active_rooms_query = db.collection("rooms").where("status", "in", ["waiting", "playing"]).count()
-    active_rooms_result = active_rooms_query.get()
-    active_rooms = active_rooms_result[0][0].value if active_rooms_result else 0
-
     # In production with large data, counting documents requires an aggregation query
     # or maintaining a counter document. For now, we will query count.
     players_count_query = db.collection("players").count()
