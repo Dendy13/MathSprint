@@ -167,6 +167,7 @@ def get_room_summary(room: Room) -> RoomSummary:
         player_count=len(room.players),
         max_players=room.max_players,
         created_at=room.created_at,
+        players=room.players,
     )
 
 

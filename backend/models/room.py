@@ -158,6 +158,7 @@ class RoomSummary(BaseModel):
     player_count: int
     max_players: int
     created_at: datetime
+    players: Dict[str, RoomPlayer] = Field(default_factory=dict)
 
 
 class AnswerSubmission(BaseModel):
