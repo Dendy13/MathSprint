@@ -9,7 +9,7 @@ import './LoginPage.css';
 export default function LoginPage() {
   const { login } = useAuth();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ display_name: '', username: '', password: '', account_type: 'user', teacher_token: '' });
+  const [form, setForm] = useState({ username: '', password: '', account_type: 'user', teacher_token: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
     
     try {
       if (mode === 'register') {
-        const data = { display_name: form.display_name, email: fakeEmail, password: form.password, account_type: form.account_type };
+        const data = { display_name: form.username, email: fakeEmail, password: form.password, account_type: form.account_type };
         if (form.account_type === 'teacher') data.teacher_token = form.teacher_token;
         // Register in backend (which creates Firebase user)
         await register(data);
@@ -75,12 +75,6 @@ export default function LoginPage() {
           <button className={`tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Daftar</button>
         </div>
         <form onSubmit={handleSubmit} className="login-form">
-          {mode === 'register' && (
-            <div className="input-group">
-              <label className="input-label">Nama Tampilan</label>
-              <input className="input" placeholder="Nama yang akan dilihat lawan" value={form.display_name} onChange={e => set('display_name', e.target.value)} required minLength={2} maxLength={30} id="input-name" />
-            </div>
-          )}
           <div className="input-group">
             <label className="input-label">Username</label>
             <input className="input" type="text" placeholder="Masukkan username" value={form.username} onChange={e => set('username', e.target.value)} required minLength={3} id="input-username" />
