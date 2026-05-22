@@ -9,7 +9,7 @@ import './LoginPage.css';
 export default function LoginPage() {
   const { login } = useAuth();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ display_name: '', email: '', password: '', account_type: 'user', teacher_token: '' });
+  const [form, setForm] = useState({ display_name: '', username: '', password: '', account_type: 'user', teacher_token: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,16 +19,21 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
+    // Konversi Username menjadi format Email (Firebase hanya menerima Email)
+    const formattedUsername = form.username.trim().toLowerCase().replace(/\s+/g, '');
+    const fakeEmail = `${formattedUsername}@mathsprint.local`;
+    
     try {
       if (mode === 'register') {
-        const data = { display_name: form.display_name, email: form.email, password: form.password, account_type: form.account_type };
+        const data = { display_name: form.display_name, email: fakeEmail, password: form.password, account_type: form.account_type };
         if (form.account_type === 'teacher') data.teacher_token = form.teacher_token;
         // Register in backend (which creates Firebase user)
         await register(data);
       }
       
       // Sign in with Firebase (for both login and after register)
-      const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+      const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, form.password);
       
       // Get the real Firebase ID Token
       const token = await userCredential.user.getIdToken();
@@ -43,8 +48,10 @@ export default function LoginPage() {
       login(profile, token);
       
     } catch (err) {
-      if (err.code === 'auth/invalid-credential') {
-        setError('Email atau password salah');
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Username atau password salah');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('Username ini sudah dipakai pemain lain!');
       } else {
         setError(err.message || 'Gagal masuk. Periksa kembali data kamu.');
       }
@@ -71,12 +78,12 @@ export default function LoginPage() {
           {mode === 'register' && (
             <div className="input-group">
               <label className="input-label">Nama Tampilan</label>
-              <input className="input" placeholder="Nama kamu" value={form.display_name} onChange={e => set('display_name', e.target.value)} required minLength={2} maxLength={30} id="input-name" />
+              <input className="input" placeholder="Nama yang akan dilihat lawan" value={form.display_name} onChange={e => set('display_name', e.target.value)} required minLength={2} maxLength={30} id="input-name" />
             </div>
           )}
           <div className="input-group">
-            <label className="input-label">Email</label>
-            <input className="input" type="email" placeholder="email@contoh.com" value={form.email} onChange={e => set('email', e.target.value)} required id="input-email" />
+            <label className="input-label">Username</label>
+            <input className="input" type="text" placeholder="Masukkan username" value={form.username} onChange={e => set('username', e.target.value)} required minLength={3} id="input-username" />
           </div>
           <div className="input-group">
             <label className="input-label">Password</label>
