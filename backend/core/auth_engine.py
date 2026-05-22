@@ -18,9 +18,11 @@ from models.auth import TeacherToken, TokenCreate
 from models.player import AccountType, PlayerCreate, PlayerProfile
 
 
-# In-memory stores (will be replaced by Firestore)
-_teacher_tokens: Dict[str, TeacherToken] = {}
-_players: Dict[str, PlayerProfile] = {}
+from services.firebase_client import get_firestore_client
+
+
+def get_db():
+    return get_firestore_client()
 
 
 def generate_teacher_token(
@@ -30,19 +32,9 @@ def generate_teacher_token(
 ) -> TeacherToken:
     """
     Generate token registrasi guru. Hanya Developer yang boleh memanggil ini.
-
     Token bersifat ONE-TIME-USE: setelah dipakai oleh satu guru, hangus.
-
-    Args:
-        developer_uid: UID developer yang membuat token
-        developer_name: Nama developer pembuat
-        token_request: Konfigurasi token (label, expires_in_days)
-
-    Returns:
-        TeacherToken yang siap diberikan ke guru
     """
     token_id = str(uuid.uuid4())
-    # Generate secure random token value (16 chars, URL-safe)
     token_value = secrets.token_urlsafe(16)
 
     expires_at = None
@@ -59,52 +51,33 @@ def generate_teacher_token(
         created_at=datetime.utcnow(),
     )
 
-    _teacher_tokens[token_id] = token
+    db = get_db()
+    db.collection("teacher_tokens").document(token_id).set(token.dict())
     return token
 
 
 def validate_teacher_token(token_value: str) -> Optional[TeacherToken]:
     """
     Validasi token guru saat registrasi.
-
-    Cek:
-      1. Token ada di database
-      2. Token belum digunakan (is_used = False)
-      3. Token belum dicabut (is_revoked = False)
-      4. Token belum expired
-
-    Args:
-        token_value: Nilai token yang diberikan guru
-
-    Returns:
-        TeacherToken jika valid, None jika tidak valid
     """
-    for token in _teacher_tokens.values():
-        if token.token_value == token_value:
-            # Check if already used
-            if token.is_used:
-                return None
-            # Check if revoked
-            if token.is_revoked:
-                return None
-            # Check expiry
-            if token.expires_at and datetime.utcnow() > token.expires_at:
-                return None
-            return token
+    db = get_db()
+    # Query for the token value
+    docs = db.collection("teacher_tokens").where("token_value", "==", token_value).limit(1).stream()
+    
+    for doc in docs:
+        token = TeacherToken(**doc.to_dict())
+        if token.is_used or token.is_revoked:
+            return None
+        # Check expiry
+        if token.expires_at and datetime.utcnow().replace(tzinfo=None) > token.expires_at.replace(tzinfo=None):
+            return None
+        return token
     return None
 
 
 def use_teacher_token(token_value: str, teacher_uid: str, teacher_name: str) -> bool:
     """
     Tandai token sebagai sudah dipakai oleh guru.
-
-    Args:
-        token_value: Nilai token
-        teacher_uid: UID guru yang menggunakan token
-        teacher_name: Nama guru
-
-    Returns:
-        True jika berhasil, False jika token invalid
     """
     token = validate_teacher_token(token_value)
     if token is None:
@@ -115,46 +88,38 @@ def use_teacher_token(token_value: str, teacher_uid: str, teacher_name: str) -> 
     token.used_by_name = teacher_name
     token.used_at = datetime.utcnow()
 
-    _teacher_tokens[token.token_id] = token
+    db = get_db()
+    db.collection("teacher_tokens").document(token.token_id).set(token.dict())
     return True
 
 
 def revoke_teacher_token(token_id: str, developer_uid: str) -> bool:
     """
     Cabut token guru (developer only).
-
-    Args:
-        token_id: ID token yang dicabut
-        developer_uid: UID developer yang mencabut
-
-    Returns:
-        True jika berhasil, False jika token tidak ditemukan
     """
-    token = _teacher_tokens.get(token_id)
-    if token is None:
+    db = get_db()
+    doc_ref = db.collection("teacher_tokens").document(token_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
         return False
+        
+    token = TeacherToken(**doc.to_dict())
     if token.created_by != developer_uid:
         return False
 
     token.is_revoked = True
-    _teacher_tokens[token_id] = token
+    doc_ref.set(token.dict())
     return True
 
 
 def list_tokens(developer_uid: str) -> list[TeacherToken]:
     """
     Daftar semua token yang dibuat oleh developer tertentu.
-
-    Args:
-        developer_uid: UID developer
-
-    Returns:
-        List TeacherToken
     """
-    return [
-        token for token in _teacher_tokens.values()
-        if token.created_by == developer_uid
-    ]
+    db = get_db()
+    docs = db.collection("teacher_tokens").where("created_by", "==", developer_uid).stream()
+    return [TeacherToken(**doc.to_dict()) for doc in docs]
 
 
 def create_player_profile(
@@ -162,21 +127,8 @@ def create_player_profile(
     data: PlayerCreate,
 ) -> PlayerProfile:
     """
-    Buat profil pemain baru di in-memory store.
-
-    Untuk akun teacher, teacher_token WAJIB sudah divalidasi sebelumnya.
-
-    Args:
-        uid: Firebase Auth UID
-        data: Data registrasi
-
-    Returns:
-        PlayerProfile baru
-
-    Raises:
-        ValueError: Jika teacher token tidak valid atau sudah dipakai
+    Buat profil pemain baru di Firestore.
     """
-    # Validate teacher token if registering as teacher
     if data.account_type == AccountType.TEACHER:
         if not data.teacher_token:
             raise ValueError("Token guru wajib diisi untuk akun teacher")
@@ -185,10 +137,8 @@ def create_player_profile(
             raise ValueError(
                 "Token guru tidak valid, sudah dipakai, atau sudah expired"
             )
-        # Mark token as used
         use_teacher_token(data.teacher_token, uid, data.display_name)
 
-    # Developer accounts cannot be created via API
     if data.account_type == AccountType.DEVELOPER:
         raise ValueError("Akun developer tidak bisa dibuat melalui registrasi biasa")
 
@@ -199,25 +149,38 @@ def create_player_profile(
         account_type=data.account_type,
     )
 
-    _players[uid] = profile
+    db = get_db()
+    db.collection("players").document(uid).set(profile.dict())
     return profile
 
 
 def get_player(uid: str) -> Optional[PlayerProfile]:
-    """Ambil profil pemain berdasarkan UID."""
-    return _players.get(uid)
+    """Ambil profil pemain berdasarkan UID dari Firestore."""
+    db = get_db()
+    doc = db.collection("players").document(uid).get()
+    if doc.exists:
+        data = doc.to_dict()
+        # Handle datetime parsing from Firestore DatetimeWithNanoseconds if needed
+        return PlayerProfile(**data)
+    return None
 
 
 def update_player(uid: str, **kwargs) -> Optional[PlayerProfile]:
-    """Update field tertentu di profil pemain."""
-    player = _players.get(uid)
-    if player is None:
+    """Update field tertentu di profil pemain di Firestore."""
+    db = get_db()
+    doc_ref = db.collection("players").document(uid)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
         return None
 
-    for key, value in kwargs.items():
-        if hasattr(player, key) and value is not None:
-            setattr(player, key, value)
+    # Filter out None values and update last_active
+    update_data = {k: v for k, v in kwargs.items() if v is not None}
+    update_data["last_active"] = datetime.utcnow()
+    
+    doc_ref.update(update_data)
+    
+    # Return updated profile
+    updated_doc = doc_ref.get()
+    return PlayerProfile(**updated_doc.to_dict())
 
-    player.last_active = datetime.utcnow()
-    _players[uid] = player
-    return player

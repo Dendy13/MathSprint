@@ -164,17 +164,14 @@ async def get_leaderboard(
     limit: int = 100,
     _uid: str = Depends(get_current_uid),
 ):
-    """
-    Ambil leaderboard.
-    Saat ini menggunakan in-memory store, mengurutkan semua player by RP.
-    """
-    from core.auth_engine import _players
+    from services.firebase_client import get_firestore_client
+    from google.cloud import firestore
+    from models.player import PlayerProfile
 
-    players = sorted(
-        _players.values(),
-        key=lambda p: p.current_rank_point,
-        reverse=True,
-    )[:limit]
+    db = get_firestore_client()
+    docs = db.collection("players").order_by("current_rank_point", direction=firestore.Query.DESCENDING).limit(limit).stream()
+    
+    players = [PlayerProfile(**doc.to_dict()) for doc in docs]
 
     entries = []
     for rank, player in enumerate(players, start=1):

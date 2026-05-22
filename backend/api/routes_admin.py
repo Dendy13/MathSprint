@@ -133,28 +133,42 @@ async def revoke_token(
 async def get_system_stats(
     token: dict = Depends(require_developer),
 ):
-    """Ambil statistik sistem: jumlah user, room aktif, match, dll."""
-    from core.auth_engine import _players, _teacher_tokens
+    from services.firebase_client import get_firestore_client
     from core.room_engine import _rooms
-
-    total_players = len(_players)
-    total_rooms = len(_rooms)
+    
     active_rooms = sum(
         1 for r in _rooms.values()
         if r.status.value in ("waiting", "playing")
     )
-    total_tokens = len(_teacher_tokens)
-    used_tokens = sum(1 for t in _teacher_tokens.values() if t.is_used)
 
-    account_types = {}
-    for p in _players.values():
-        at = p.account_type.value
-        account_types[at] = account_types.get(at, 0) + 1
+    db = get_firestore_client()
+    
+    # In production with large data, counting documents requires an aggregation query
+    # or maintaining a counter document. For now, we will query count.
+    players_count_query = db.collection("players").count()
+    players_count_result = players_count_query.get()
+    total_players = players_count_result[0][0].value if players_count_result else 0
+    
+    tokens_count_query = db.collection("teacher_tokens").count()
+    tokens_count_result = tokens_count_query.get()
+    total_tokens = tokens_count_result[0][0].value if tokens_count_result else 0
+    
+    # We don't query every single document for daily active in this simple migration,
+    # as it's inefficient. Instead, we do a basic query for active today.
+    # Note: Requires composite index if complex, but simple where should work.
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    active_today_query = db.collection("players").where("last_active", ">=", today_start).count()
+    active_today_result = active_today_query.get()
+    active_today = active_today_result[0][0].value if active_today_result else 0
+    
+    # Used tokens
+    used_tokens_query = db.collection("teacher_tokens").where("is_used", "==", True).count()
+    used_tokens_result = used_tokens_query.get()
+    used_tokens = used_tokens_result[0][0].value if used_tokens_result else 0
 
     return {
         "total_players": total_players,
-        "account_types": account_types,
-        "total_rooms": total_rooms,
+        "active_players_today": active_today,
         "active_rooms": active_rooms,
         "total_teacher_tokens": total_tokens,
         "used_teacher_tokens": used_tokens,
