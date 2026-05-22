@@ -6,5 +6,6 @@ export const joinRoom = (roomId) => post(`/game/room/join/${roomId}`);
 export const getRoomInfo = (roomId) => get(`/game/room/${roomId}`);
 export const startGame = (roomId) => post(`/game/room/${roomId}/start`);
 export const submitAnswer = (roomId, data) => post(`/game/room/${roomId}/answer`, data);
+export const getRoomQuestions = (roomId) => get(`/game/room/${roomId}/questions`);
 export const getWaitingRooms = () => get('/game/rooms');
 export const leaveRoom = (roomId) => post(`/game/room/${roomId}/leave`);

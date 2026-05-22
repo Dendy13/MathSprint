@@ -6,10 +6,19 @@ import './RoomPage.css';
 export default function RoomPage() {
   const navigate = useNavigate();
   const [config, setConfig] = useState({ op: 'add', diff: 'easy', question_limit: 10, elo_wager: 25, time_limit_seconds: 60 });
+  const [loading, setLoading] = useState(false);
 
-  const handleCreate = () => {
-    // In production, call createRoom API. For now, start solo game with config.
-    navigate(`/game?mode=solo&op=${config.op}&diff=${config.diff}&count=${config.question_limit}&time=${config.time_limit_seconds}`);
+  const handleCreate = async () => {
+    setLoading(true);
+    try {
+      const { createRoom } = await import('../api/game.js');
+      const room = await createRoom({ config, max_players: 2 });
+      navigate(`/room/${room.room_id}`);
+    } catch (err) {
+      alert(err.message || 'Gagal membuat room');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,8 +75,8 @@ export default function RoomPage() {
             className="slider" id="slider-time" />
         </div>
 
-        <button className="btn btn-primary btn-full btn-lg" onClick={handleCreate} id="btn-create-room-submit">
-          🚀 Buat Room & Mulai
+        <button className="btn btn-primary btn-full btn-lg" onClick={handleCreate} disabled={loading} id="btn-create-room-submit">
+          {loading ? <span className="spinner" /> : '🚀 Buat Room & Tunggu Lawan'}
         </button>
       </div>
     </div>

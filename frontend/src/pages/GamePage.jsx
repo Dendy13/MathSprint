@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTimer } from '../hooks/useTimer.js';
-import { getQuestion } from '../api/game.js';
+import { getQuestion, getRoomQuestions, getRoomInfo, submitAnswer as apiSubmitAnswer } from '../api/game.js';
 import { OP_SYMBOLS, OP_COLORS, OP_LABELS, DIFF_LABELS } from '../utils/constants.js';
 import './GamePage.css';
 
@@ -13,6 +13,7 @@ export default function GamePage() {
   const op = params.get('op') || 'add';
   const diff = params.get('diff') || 'easy';
   const mode = params.get('mode') || 'solo';
+  const roomId = params.get('roomId');
   const totalQ = parseInt(params.get('count') || '10');
   const timeLimit = parseInt(params.get('time') || '60');
 
@@ -25,6 +26,8 @@ export default function GamePage() {
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [feedback, setFeedback] = useState(null);
+  const [opponent, setOpponent] = useState(null);
+  const [waitingOpponent, setWaitingOpponent] = useState(false);
   const inputRef = useRef(null);
 
   const onTimerExpire = useCallback(() => {
@@ -33,21 +36,64 @@ export default function GamePage() {
 
   const timer = useTimer(timeLimit, onTimerExpire);
 
-  // Generate questions on mount
+  // Generate or Load questions on mount
   useEffect(() => {
     const loadQuestions = async () => {
-      const qs = [];
-      for (let i = 0; i < totalQ; i++) {
-        try {
-          const q = await getQuestion(op, diff);
-          qs.push(q);
-        } catch { break; }
+      try {
+        if (mode === 'multi' && roomId) {
+          const qs = await getRoomQuestions(roomId);
+          setQuestions(qs);
+          setAnswers(new Array(qs.length).fill(null));
+        } else {
+          const qs = [];
+          for (let i = 0; i < totalQ; i++) {
+            try {
+              const q = await getQuestion(op, diff);
+              qs.push(q);
+            } catch { break; }
+          }
+          setQuestions(qs);
+          setAnswers(new Array(qs.length).fill(null));
+        }
+      } catch (err) {
+        console.error("Gagal memuat soal", err);
       }
-      setQuestions(qs);
-      setAnswers(new Array(qs.length).fill(null));
     };
     loadQuestions();
-  }, [op, diff, totalQ]);
+  }, [op, diff, totalQ, mode, roomId]);
+
+  // Polling Opponent in Multiplayer
+  useEffect(() => {
+    if (mode !== 'multi' || !roomId) return;
+    if (phase !== 'playing' && phase !== 'finished') return;
+
+    let timeoutId;
+    let isMounted = true;
+
+    const pollOpponent = async () => {
+      try {
+        const room = await getRoomInfo(roomId);
+        if (!isMounted) return;
+
+        // Find opponent
+        const players = Object.values(room.players);
+        const opp = players.find(p => p.uid !== user?.uid);
+        if (opp) setOpponent(opp);
+
+        // Check if room is finished (meaning both finished)
+        if (room.status === 'finished' && phase === 'finished') {
+           navigate(`/results?mode=multi&roomId=${roomId}`);
+        } else {
+           timeoutId = setTimeout(pollOpponent, 2000);
+        }
+      } catch (e) {
+        if (isMounted) timeoutId = setTimeout(pollOpponent, 3000);
+      }
+    };
+    pollOpponent();
+
+    return () => { isMounted = false; clearTimeout(timeoutId); };
+  }, [mode, roomId, phase, navigate, user]);
 
   // Countdown
   useEffect(() => {
@@ -99,6 +145,11 @@ export default function GamePage() {
       showFeedback('wrong', q.answer);
     }
 
+    // Submit to backend asynchronously if multiplayer
+    if (mode === 'multi' && roomId && userAns !== null) {
+      apiSubmitAnswer(roomId, { question_index: currentIdx, answer: userAns }).catch(() => {});
+    }
+
     setInputVal('');
     if (currentIdx + 1 >= questions.length) {
       setTimeout(() => finishGame(newAnswers), 300);
@@ -115,6 +166,12 @@ export default function GamePage() {
     const wrong = ans.filter((a, i) => a !== null && a !== questions[i]?.answer).length;
     const elapsed = timer.getElapsedMs();
     
+    if (mode === 'multi') {
+      setWaitingOpponent(true);
+      // Let the polling effect navigate to results once room is FINISHED
+      return;
+    }
+
     let oldRp = user?.current_rank_point || 1200;
     let newRp = oldRp;
     let rpChange = 0;
@@ -155,8 +212,19 @@ export default function GamePage() {
           {countdown > 0 ? countdown : 'GO!'}
         </div>
         <p className="text-muted" style={{ marginTop: 16 }}>
-          {totalQ} soal {OP_LABELS[op]} ({DIFF_LABELS[diff]}) dalam {timeLimit} detik
+          {questions.length || totalQ} soal {OP_LABELS[op]} ({DIFF_LABELS[diff]}) dalam {timeLimit} detik
         </p>
+      </div>
+    );
+  }
+
+  // Waiting Opponent Screen
+  if (waitingOpponent) {
+    return (
+      <div className="page text-center" style={{ paddingTop: '20vh' }}>
+        <span className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
+        <h2 className="mt-4">Selesai!</h2>
+        <p className="text-muted">Menunggu {opponent?.display_name || 'lawan'} menyelesaikan soal...</p>
       </div>
     );
   }
@@ -195,6 +263,19 @@ export default function GamePage() {
       <div className="timer-bar">
         <div className="timer-bar-fill" style={{ width: `${timer.percent}%`, background: timer.timerColor, transition: 'width 0.1s linear' }} />
       </div>
+
+      {/* Opponent Progress (Multiplayer only) */}
+      {mode === 'multi' && opponent && (
+        <div className="opponent-progress" style={{ margin: '0 1rem 1rem 1rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span className="text-muted">{opponent.display_name}</span>
+            <span className="text-accent">{opponent.correct_answers} Benar</span>
+          </div>
+          <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: 'var(--accent)', width: `${(opponent.current_question_index / questions.length) * 100}%`, transition: 'width 0.3s ease' }} />
+          </div>
+        </div>
+      )}
 
       {/* Question */}
       <div className="game-main">

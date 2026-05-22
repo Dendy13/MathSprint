@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RoomPage from './pages/RoomPage.jsx';
+import WaitingRoomPage from './pages/WaitingRoomPage.jsx';
 import GamePage from './pages/GamePage.jsx';
 import ResultsPage from './pages/ResultsPage.jsx';
 import LeaderboardPage from './pages/LeaderboardPage.jsx';
@@ -28,7 +29,9 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/room" element={<Navigate to="/room/create" replace />} />
         <Route path="/room/create" element={<ProtectedRoute><RoomPage /></ProtectedRoute>} />
+        <Route path="/room/:roomId" element={<ProtectedRoute><WaitingRoomPage /></ProtectedRoute>} />
         <Route path="/game" element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
         <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
         <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
