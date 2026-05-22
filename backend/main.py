@@ -77,7 +77,10 @@ app = FastAPI(
 # CORS MIDDLEWARE
 # ============================================================
 
-cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
+cors_origins_raw = os.getenv(
+    "CORS_ORIGINS", 
+    "https://mathsprint-frontend-447876034135.asia-southeast2.run.app,http://localhost:5173,http://localhost:3000"
+)
 cors_origins = [origin.strip() for origin in cors_origins_raw.split(",")]
 
 app.add_middleware(
