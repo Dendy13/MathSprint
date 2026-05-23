@@ -1,15 +1,51 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
+import { getMatchResult } from '../api/game.js';
 import { OP_LABELS, OP_SYMBOLS, DIFF_LABELS } from '../utils/constants.js';
 import { getStarEmoji, getStarMessage } from '../utils/helpers.js';
 import './ResultsPage.css';
 
 export default function ResultsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get('mode') || 'solo';
+  const roomId = searchParams.get('roomId');
+  const { user } = useAuth();
+
   const [results, setResults] = useState(null);
+  const [multiResult, setMultiResult] = useState(null);
+  const [loading, setLoading] = useState(mode === 'multi');
   const [animatedScore, setAnimatedScore] = useState(0);
 
+  // 1. Polling for Multiplayer Match Result
   useEffect(() => {
+    if (mode !== 'multi' || !roomId) return;
+    
+    let isMounted = true;
+    let timeoutId;
+
+    const pollResult = async () => {
+      try {
+        const data = await getMatchResult(roomId);
+        if (!isMounted) return;
+        setMultiResult(data);
+        setLoading(false);
+      } catch (err) {
+        if (!isMounted) return;
+        // Keep polling
+        timeoutId = setTimeout(pollResult, 2000);
+      }
+    };
+    
+    pollResult();
+    return () => { isMounted = false; clearTimeout(timeoutId); };
+  }, [mode, roomId]);
+
+  // 2. Load Solo Results from SessionStorage
+  useEffect(() => {
+    if (mode === 'multi') return;
+    
     const raw = sessionStorage.getItem('mathsprint_results');
     if (!raw) { navigate('/'); return; }
     const data = JSON.parse(raw);
@@ -37,8 +73,94 @@ export default function ResultsPage() {
       if (frame >= duration) clearInterval(interval);
     }, 25);
     return () => clearInterval(interval);
-  }, []);
+  }, [mode, navigate]);
 
+  if (loading) {
+    return (
+      <div className="page text-center" style={{ paddingTop: '20vh' }}>
+        <span className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
+        <h2 className="mt-4">Selesai!</h2>
+        <p className="text-muted">Menunggu lawan menyelesaikan soal dan menghitung rank point...</p>
+      </div>
+    );
+  }
+
+  // --- RENDER MULTIPLAYER RESULT ---
+  if (mode === 'multi' && multiResult) {
+    const isWinner = multiResult.winner_uid === user?.uid;
+    const isDraw = multiResult.is_draw;
+    
+    const myCalc = isWinner || isDraw ? multiResult.winner_calculation : multiResult.loser_calculation;
+    const oppCalc = isWinner || isDraw ? multiResult.loser_calculation : multiResult.winner_calculation;
+    
+    // Quick fix: if we are loser but draw, myCalc might be wrong if winner_calculation was assigned to us arbitrarily. 
+    // Let's explicitly match uid:
+    const actualMyCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.winner_calculation : multiResult.loser_calculation;
+    const actualOppCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.loser_calculation : multiResult.winner_calculation;
+
+    return (
+      <div className="page page-centered">
+        <div className="results-card animate-slide-up" style={{ textAlign: 'center' }}>
+          
+          <h1 style={{ fontSize: '3rem', margin: '0 0 16px 0', color: isDraw ? 'var(--text)' : isWinner ? 'var(--green)' : 'var(--red)' }}>
+            {isDraw ? 'SERI! 🤝' : isWinner ? 'MENANG! 🎉' : 'KALAH! 💔'}
+          </h1>
+          
+          <p className="text-muted">{OP_LABELS[multiResult.op]} • {DIFF_LABELS[multiResult.diff]}</p>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--surface)', padding: 16, borderRadius: 'var(--radius)', marginTop: 24 }}>
+            <div style={{ textAlign: 'left' }}>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>SKOR KAMU</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{actualMyCalc.display_name}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>SKOR LAWAN</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{actualOppCalc.display_name}</div>
+            </div>
+          </div>
+
+          <div className="rp-change-card" style={{ marginTop: 24 }}>
+            <div className="rp-side">
+              <span className="rp-label">Rank Point</span>
+              <span className="rp-value">{actualMyCalc.old_rp}</span>
+            </div>
+            <div className="rp-arrow">
+              <span className={`arrow ${actualMyCalc.rp_change > 0 ? 'up' : actualMyCalc.rp_change < 0 ? 'down' : 'neutral'}`}>
+                {actualMyCalc.rp_change > 0 ? '↗' : actualMyCalc.rp_change < 0 ? '↘' : '➡'}
+              </span>
+              <span className={`rp-diff ${actualMyCalc.rp_change > 0 ? 'text-green' : actualMyCalc.rp_change < 0 ? 'text-red' : 'text-muted'}`}>
+                {actualMyCalc.rp_change > 0 ? `+${actualMyCalc.rp_change}` : actualMyCalc.rp_change}
+              </span>
+            </div>
+            <div className="rp-side">
+              <span className="rp-label">Rank Baru</span>
+              <span className={`rp-value ${actualMyCalc.rp_change > 0 ? 'text-green' : actualMyCalc.rp_change < 0 ? 'text-red' : ''}`}>
+                {actualMyCalc.new_rp}
+              </span>
+            </div>
+          </div>
+
+          {actualMyCalc.learning_protection_applied && (
+            <div style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--accent)', background: 'rgba(56, 189, 248, 0.1)', padding: 8, borderRadius: 8 }}>
+              🛡️ Learning Protection aktif: Penurunan RP didiskon 30% karena kekalahan beruntun.
+            </div>
+          )}
+
+          <div className="results-actions" style={{ marginTop: 32 }}>
+            <button className="btn btn-primary" onClick={() => navigate('/room/create')} id="btn-play-again">
+              ⚔️ Main Lagi
+            </button>
+            <button className="btn btn-ghost" onClick={() => navigate('/')} id="btn-home">
+              🔙 Beranda
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER SOLO RESULT ---
   if (!results) return null;
 
   return (

@@ -60,7 +60,7 @@ def initialize_room(host: PlayerProfile, config: RoomConfig) -> Room:
     )
     
     db = get_db()
-    db.collection("rooms").document(room_id).set(room.model_dump())
+    db.collection("rooms").document(room_id).set(room.model_dump(mode='json'))
     return room
 
 
@@ -162,6 +162,30 @@ def submit_answer(
     if all(p.is_finished for p in room.players.values()):
         room.status = RoomStatus.FINISHED
         room.finished_at = datetime.utcnow()
+        
+        # Calculate Elo and update player profiles
+        from core.rank_engine import process_match_result
+        from core.auth_engine import get_player, update_player
+        
+        result = process_match_result(room)
+        room.match_result = result.model_dump(mode='json')
+        
+        # Update player profiles with new RP
+        for calc in [result.winner_calculation, result.loser_calculation]:
+            p_profile = get_player(calc.player_uid)
+            if p_profile is not None:
+                updates = {
+                    "current_rank_point": calc.new_rp,
+                    "total_matches": p_profile.total_matches + 1,
+                }
+                if result.winner_uid == calc.player_uid:
+                    updates["wins"] = p_profile.wins + 1
+                elif result.loser_uid == calc.player_uid:
+                    updates["losses"] = p_profile.losses + 1
+                else:
+                    updates["draws"] = p_profile.draws + 1
+
+                update_player(calc.player_uid, **updates)
 
     db = get_db()
     db.collection("rooms").document(room_id).set(room.model_dump())

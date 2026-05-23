@@ -130,6 +130,10 @@ class Room(BaseModel):
         default=None,
         description="Waktu game selesai"
     )
+    match_result: Optional[dict] = Field(
+        default=None,
+        description="Hasil kalkulasi Elo rating (MatchResult dump) setelah game selesai"
+    )
     
     model_config = {"use_enum_values": True}
 
