@@ -1,29 +1,64 @@
 import { useState, useEffect } from 'react';
-import { getLeaderboard } from '../api/match.js';
+import { getLeaderboard, getSoloLeaderboard } from '../api/match.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatRP, formatWinRate, getRankTier } from '../utils/helpers.js';
 import './LeaderboardPage.css';
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('multi'); // 'multi' | 'solo'
   const [entries, setEntries] = useState([]);
+  const [soloEntries, setSoloEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getLeaderboard(100).then(setEntries).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    if (activeTab === 'multi') {
+      getLeaderboard(100)
+        .then(setEntries)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      getSoloLeaderboard(100)
+        .then(setSoloEntries)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [activeTab]);
 
   const podiumColors = ['#f7c948', '#c0c0c0', '#cd7f32'];
   const podiumEmoji = ['👑', '🥈', '🥉'];
+  
+  const currentData = activeTab === 'multi' ? entries : soloEntries;
 
   return (
     <div className="page">
-      <h1 style={{ marginBottom: 8 }}>🏆 Peringkat</h1>
-      <p className="text-muted" style={{ marginBottom: 24 }}>Top pemain berdasarkan Rank Point</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 style={{ marginBottom: 8 }}>🏆 Peringkat</h1>
+          <p className="text-muted">Top pemain MathSprint</p>
+        </div>
+        <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 'var(--radius-full)', border: '1px solid var(--border)' }}>
+          <button 
+            className={`btn ${activeTab === 'multi' ? 'btn-primary' : 'btn-ghost'}`} 
+            style={{ borderRadius: 'var(--radius-full)', padding: '8px 20px' }}
+            onClick={() => setActiveTab('multi')}
+          >
+            ⚔️ Multiplayer
+          </button>
+          <button 
+            className={`btn ${activeTab === 'solo' ? 'btn-primary' : 'btn-ghost'}`} 
+            style={{ borderRadius: 'var(--radius-full)', padding: '8px 20px' }}
+            onClick={() => setActiveTab('solo')}
+          >
+            🏃 Solo 60s
+          </button>
+        </div>
+      </div>
 
       {loading ? (
         <div className="text-center" style={{ padding: 40 }}><div className="spinner spinner-lg" style={{ margin: '0 auto' }} /></div>
-      ) : entries.length === 0 ? (
+      ) : currentData.length === 0 ? (
         <div className="empty-state">
           <span style={{ fontSize: 48 }}>🌟</span>
           <h3>Belum ada data</h3>
@@ -33,38 +68,69 @@ export default function LeaderboardPage() {
         <>
           {/* Podium */}
           <div className="podium">
-            {entries.slice(0, 3).map((e, i) => {
-              const tier = getRankTier(e.current_rank_point);
-              return (
-                <div key={e.uid} className={`podium-card rank-${i + 1}`} style={{ '--podium-color': podiumColors[i] }}>
-                  <span className="podium-emoji">{podiumEmoji[i]}</span>
-                  <span className="podium-rank">#{i + 1}</span>
-                  <span className="podium-name">{e.display_name}</span>
-                  <span className="podium-rp" style={{ color: podiumColors[i] }}>{formatRP(e.current_rank_point)} RP</span>
-                  <span className="podium-stats">{e.total_matches} match · {formatWinRate(e.wins, e.total_matches)}% WR</span>
-                </div>
-              );
+            {currentData.slice(0, 3).map((e, i) => {
+              if (activeTab === 'multi') {
+                const tier = getRankTier(e.current_rank_point);
+                return (
+                  <div key={e.uid} className={`podium-card rank-${i + 1}`} style={{ '--podium-color': podiumColors[i] }}>
+                    <span className="podium-emoji">{podiumEmoji[i]}</span>
+                    <span className="podium-rank">#{i + 1}</span>
+                    <span className="podium-name">{e.display_name}</span>
+                    <span className="podium-rp" style={{ color: podiumColors[i] }}>{formatRP(e.current_rank_point)} RP</span>
+                    <span className="podium-stats">{e.total_matches} match · {formatWinRate(e.wins, e.total_matches)}% WR</span>
+                  </div>
+                );
+              } else {
+                return (
+                  <div key={e.player_uid} className={`podium-card rank-${i + 1}`} style={{ '--podium-color': podiumColors[i] }}>
+                    <span className="podium-emoji">{podiumEmoji[i]}</span>
+                    <span className="podium-rank">#{i + 1}</span>
+                    <span className="podium-name">{e.display_name}</span>
+                    <span className="podium-rp" style={{ color: podiumColors[i] }}>{e.score} Pts</span>
+                    <span className="podium-stats">{e.correct} Benar · {e.max_streak} Kombo</span>
+                  </div>
+                );
+              }
             })}
           </div>
 
           {/* Table */}
           <div className="lb-table">
             <div className="lb-header">
-              <span>#</span><span>Pemain</span><span>RP</span><span>Match</span><span>Win Rate</span>
+              {activeTab === 'multi' ? (
+                <><span>#</span><span>Pemain</span><span>RP</span><span>Match</span><span>Win Rate</span></>
+              ) : (
+                <><span>#</span><span>Pemain</span><span>Skor</span><span>Benar / Salah</span><span>Max Kombo</span></>
+              )}
             </div>
-            {entries.map(e => (
-              <div key={e.uid} className={`lb-row ${e.uid === user?.uid ? 'highlight' : ''}`}>
-                <span className="lb-rank">{e.rank}</span>
-                <span className="lb-name">
-                  {getRankTier(e.current_rank_point).emoji} {e.display_name}
-                </span>
-                <span className="lb-rp" style={{ color: getRankTier(e.current_rank_point).color }}>
-                  {formatRP(e.current_rank_point)}
-                </span>
-                <span>{e.total_matches}</span>
-                <span>{formatWinRate(e.wins, e.total_matches)}%</span>
-              </div>
-            ))}
+            {currentData.map((e, index) => {
+              const rank = index + 1;
+              if (activeTab === 'multi') {
+                return (
+                  <div key={e.uid} className={`lb-row ${e.uid === user?.uid ? 'highlight' : ''}`}>
+                    <span className="lb-rank">{e.rank || rank}</span>
+                    <span className="lb-name">
+                      {getRankTier(e.current_rank_point).emoji} {e.display_name}
+                    </span>
+                    <span className="lb-rp" style={{ color: getRankTier(e.current_rank_point).color }}>
+                      {formatRP(e.current_rank_point)}
+                    </span>
+                    <span>{e.total_matches}</span>
+                    <span>{formatWinRate(e.wins, e.total_matches)}%</span>
+                  </div>
+                );
+              } else {
+                return (
+                  <div key={e.player_uid} className={`lb-row ${e.player_uid === user?.uid ? 'highlight' : ''}`}>
+                    <span className="lb-rank">{rank}</span>
+                    <span className="lb-name">{e.display_name}</span>
+                    <span className="lb-rp" style={{ color: 'var(--accent)' }}>{e.score} Pts</span>
+                    <span><span className="text-green">{e.correct}</span> / <span className="text-red">{e.wrong}</span></span>
+                    <span>🔥 {e.max_streak}</span>
+                  </div>
+                );
+              }
+            })}
           </div>
         </>
       )}

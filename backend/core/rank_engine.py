@@ -222,10 +222,11 @@ def process_match_result(
 
 def process_solo_match(player: PlayerProfile, submission: 'SoloMatchSubmission') -> 'SoloMatchResult':
     """
-    Kalkulasi RP untuk mode Solo.
+    Kalkulasi RP dan Skor untuk mode Solo Endless.
     Logika penilaian:
-    - Base RP = + (benar) dan - (salah) berdasarkan difficulty.
+    - Base Skor = + (benar) dan - (salah) berdasarkan difficulty.
     - Combo Bonus = max_streak * multiplier
+    - RP didapatkan sangat sedikit: 1 RP setiap 5 soal benar.
     """
     from models.match import SoloMatchResult
     
@@ -247,23 +248,24 @@ def process_solo_match(player: PlayerProfile, submission: 'SoloMatchSubmission')
     points_lost = submission.wrong * base_wrong
     combo_bonus = submission.max_streak * combo_mult
     
-    rp_change = points_gained - points_lost + combo_bonus
+    score = max(0, points_gained - points_lost + combo_bonus)
     
-    # Cap negative RP change at -15 to be safe (don't punish too hard in solo)
-    if rp_change < -15:
-        rp_change = -15
+    # RP change is minimal: 1 RP per 5 correct answers
+    rp_change = submission.correct // 5
         
     old_rp = player.current_rank_point
-    new_rp = max(0, old_rp + rp_change)
+    new_rp = old_rp + rp_change
     
     match_id = str(uuid.uuid4())
     
     return SoloMatchResult(
         match_id=match_id,
         player_uid=player.uid,
+        display_name=player.display_name,
         old_rp=old_rp,
         new_rp=new_rp,
         rp_change=rp_change,
+        score=score,
         correct=submission.correct,
         wrong=submission.wrong,
         total=submission.total,

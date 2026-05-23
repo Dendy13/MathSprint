@@ -55,12 +55,12 @@ export default function ResultsPage() {
     const baseScore = data.correct * 100;
     const penalty = data.wrong * 50;
     const streakBonus = data.maxStreak >= 3 ? (data.maxStreak - 2) * 30 : 0;
-    const finalScore = Math.max(0, baseScore + streakBonus - penalty);
+    const finalScore = data.score !== undefined ? data.score : Math.max(0, baseScore + streakBonus - penalty);
     data.baseScore = baseScore;
     data.streakBonus = streakBonus;
     data.penalty = penalty;
     data.finalScore = finalScore;
-    data.stars = data.correct === data.total ? 3 : data.correct >= Math.ceil(data.total * 0.75) ? 2 : data.correct >= Math.ceil(data.total * 0.5) ? 1 : 0;
+    data.stars = data.correct >= 20 ? 3 : data.correct >= 10 ? 2 : data.correct >= 5 ? 1 : 0;
     setResults({ ...data });
 
     // Count-up animation
@@ -199,10 +199,10 @@ export default function ResultsPage() {
         </div>
 
         {/* Rank Point Change */}
-        <div className="rp-change-card">
+        <div className="rp-change-card" style={{ marginTop: 24 }}>
           <div className="rp-side">
-            <span className="rp-label">Rank Sebelumnya</span>
-            <span className="rp-value">{results.oldRp} RP</span>
+            <span className="rp-label">Rank Point Sebelumnya</span>
+            <span className="rp-value">{results.oldRp}</span>
           </div>
           <div className="rp-arrow">
             <span className={`arrow ${results.rpChange > 0 ? 'up' : results.rpChange < 0 ? 'down' : 'neutral'}`}>
@@ -215,10 +215,13 @@ export default function ResultsPage() {
           <div className="rp-side">
             <span className="rp-label">Rank Baru</span>
             <span className={`rp-value ${results.rpChange > 0 ? 'text-green' : results.rpChange < 0 ? 'text-red' : ''}`}>
-              {results.newRp} RP
+              {results.newRp}
             </span>
           </div>
         </div>
+        <p className="text-muted" style={{ textAlign: 'center', fontSize: '0.8rem', marginTop: 8 }}>
+          *Mode latihan Solo hanya memberikan maksimal 1 RP setiap 5 jawaban benar.
+        </p>
 
         {/* Review Table */}
         <div className="review-section">

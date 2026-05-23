@@ -119,9 +119,11 @@ class SoloMatchResult(BaseModel):
     """Hasil dari kalkulasi rank point mode Solo."""
     match_id: str
     player_uid: str
+    display_name: str
     old_rp: int
     new_rp: int
     rp_change: int
+    score: int
     correct: int
     wrong: int
     total: int

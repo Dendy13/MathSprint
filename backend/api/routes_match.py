@@ -73,24 +73,24 @@ async def submit_solo_match(
 
     result = process_solo_match(player, data)
     
-    # Update player profile
+    # Update player profile (only add small RP change, and update matches)
     updates = {
         "current_rank_point": result.new_rp,
         "total_matches": player.total_matches + 1,
     }
-    
-    # Calculate win/loss based on passing grade (e.g., > 50% correct is a win)
-    is_win = result.correct > (result.total / 2)
-    if is_win:
-        updates["wins"] = player.wins + 1
-    else:
-        updates["losses"] = player.losses + 1
-        
     update_player(uid, **updates)
     
-    # Save match history (mock array for now)
-    # _match_history.append(...)
+    # Save to solo_scores for leaderboard
+    from services.firebase_client import get_firestore_client
+    db = get_firestore_client()
     
+    # Check if there's an existing score, if new score is higher, overwrite
+    doc_ref = db.collection("solo_scores").document(uid)
+    doc = doc_ref.get()
+    
+    if not doc.exists or doc.to_dict().get("score", 0) < result.score:
+        doc_ref.set(result.model_dump(mode='json'))
+        
     return result
 
 
@@ -148,3 +148,22 @@ async def get_leaderboard(
         ))
 
     return entries
+
+
+@router.get(
+    "/leaderboard/solo",
+    response_model=list[SoloMatchResult],
+    summary="Solo Leaderboard ranking",
+    description="Ambil top 100 skor tertinggi di mode Solo.",
+)
+async def get_solo_leaderboard(
+    limit: int = 100,
+    _uid: str = Depends(get_current_uid),
+):
+    from services.firebase_client import get_firestore_client
+    from google.cloud import firestore
+
+    db = get_firestore_client()
+    docs = db.collection("solo_scores").order_by("score", direction=firestore.Query.DESCENDING).limit(limit).stream()
+    
+    return [SoloMatchResult(**doc.to_dict()) for doc in docs]

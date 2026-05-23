@@ -60,7 +60,16 @@
 .join-row { display: flex; gap: 12px; }
 .room-code-input { flex: 1; max-width: 240px; }
 @media (max-width: 768px) {
-  .hero-stats { width: 100%; }
-  .stat-card { flex: 1; min-width: 80px; padding: 12px; }
+  .hero-stats { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    width: 100%; 
+    gap: 8px; 
+  }
+  .stat-card { 
+    flex: unset; 
+    min-width: 0; 
+    padding: 12px 8px; 
+  }
   .op-grid { grid-template-columns: repeat(2, 1fr); }
 }

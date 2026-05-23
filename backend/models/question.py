@@ -60,7 +60,7 @@ class QuestionStackRequest(BaseModel):
     count: int = Field(
         default=10,
         ge=1,
-        le=50,
+        le=100,
         description="Jumlah soal yang akan digenerate"
     )
 

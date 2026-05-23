@@ -31,10 +31,16 @@ export default function GamePage() {
   const inputRef = useRef(null);
 
   const onTimerExpire = useCallback(() => {
-    if (phase === 'playing') finishGame();
+    if (phase === 'playing') {
+      // Small delay to allow final render before finish
+      setTimeout(() => finishGameRef.current(), 100);
+    }
   }, [phase]);
 
-  const timer = useTimer(timeLimit, onTimerExpire);
+  const timer = useTimer(mode === 'solo' ? 60 : timeLimit, onTimerExpire);
+  
+  // Create a mutable ref to finishGame so the timer can access the latest state
+  const finishGameRef = useRef(() => {});
 
   // Generate or Load questions on mount
   useEffect(() => {
@@ -45,22 +51,18 @@ export default function GamePage() {
           setQuestions(qs);
           setAnswers(new Array(qs.length).fill(null));
         } else {
-          const qs = [];
-          for (let i = 0; i < totalQ; i++) {
-            try {
-              const q = await getQuestion(op, diff);
-              qs.push(q);
-            } catch { break; }
-          }
-          setQuestions(qs);
-          setAnswers(new Array(qs.length).fill(null));
+          // Endless Solo Mode: Fetch 100 questions
+          const { getQuestionStack } = await import('../api/game.js');
+          const res = await getQuestionStack({ op, diff, count: 100 });
+          setQuestions(res.questions);
+          setAnswers(new Array(res.questions.length).fill(null));
         }
       } catch (err) {
         console.error("Gagal memuat soal", err);
       }
     };
     loadQuestions();
-  }, [op, diff, totalQ, mode, roomId]);
+  }, [op, diff, mode, roomId]);
 
   // Polling Opponent in Multiplayer
   useEffect(() => {
@@ -162,8 +164,14 @@ export default function GamePage() {
     timer.stop();
     setPhase('finished');
     const ans = finalAnswers || answersRef.current;
-    const correct = ans.filter((a, i) => a === questions[i]?.answer).length;
-    const wrong = ans.filter((a, i) => a !== null && a !== questions[i]?.answer).length;
+    
+    // Calculate based on the number of answered questions
+    const answeredCount = mode === 'solo' ? currentIdx + (ans[currentIdx] !== null ? 1 : 0) : questions.length;
+    
+    // We only evaluate up to answeredCount
+    const evaluatedAnswers = ans.slice(0, answeredCount);
+    const correct = evaluatedAnswers.filter((a, i) => a === questions[i]?.answer).length;
+    const wrong = evaluatedAnswers.filter((a, i) => a !== null && a !== questions[i]?.answer).length;
     const elapsed = timer.getElapsedMs();
     
     if (mode === 'multi') {
@@ -175,27 +183,32 @@ export default function GamePage() {
     let oldRp = user?.current_rank_point || 1200;
     let newRp = oldRp;
     let rpChange = 0;
+    let score = 0;
 
     if (user) {
       try {
         const { submitSoloMatch } = await import('../api/match.js');
         const res = await submitSoloMatch({
-          op, diff, correct, wrong, total: questions.length,
+          op, diff, correct, wrong, total: answeredCount,
           max_streak: maxStreakRef.current, elapsed_seconds: Math.floor(elapsed / 1000)
         });
         oldRp = res.old_rp;
         newRp = res.new_rp;
         rpChange = res.rp_change;
+        score = res.score;
         updateUser({ current_rank_point: newRp, total_matches: (user.total_matches || 0) + 1 });
       } catch (err) {
         console.error("Gagal submit match:", err);
       }
     }
 
-    const resultsData = { op, diff, correct, wrong, total: questions.length, maxStreak: maxStreakRef.current, elapsed, questions, answers: ans, oldRp, newRp, rpChange };
+    const resultsData = { op, diff, correct, wrong, total: answeredCount, maxStreak: maxStreakRef.current, elapsed, questions: questions.slice(0, answeredCount), answers: evaluatedAnswers, oldRp, newRp, rpChange, score };
     sessionStorage.setItem('mathsprint_results', JSON.stringify(resultsData));
     setTimeout(() => navigate('/results'), 500);
   };
+  
+  // Assign finishGame to the ref
+  finishGameRef.current = finishGame;
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); }
