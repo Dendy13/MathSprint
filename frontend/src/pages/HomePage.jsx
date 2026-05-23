@@ -1,18 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getProfile } from '../api/auth.js';
 import { formatRP, formatWinRate, getRankTier } from '../utils/helpers.js';
 import { OP_LABELS, OP_SYMBOLS, OP_COLORS, DIFF_LABELS, DIFF_COLORS } from '../utils/constants.js';
 import './HomePage.css';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const tier = getRankTier(user?.current_rank_point || 1200);
 
   const [soloConfig, setSoloConfig] = useState({ op: 'add', diff: 'easy' });
   const [roomCode, setRoomCode] = useState('');
   const [showSolo, setShowSolo] = useState(false);
+
+  useEffect(() => {
+    // Sinkronisasi data terbaru dari server agar stat di menu utama akurat
+    getProfile().then(data => {
+      updateUser({
+        current_rank_point: data.current_rank_point,
+        total_matches: data.total_matches,
+        wins: data.wins,
+        losses: data.losses,
+        learning_streak_days: data.learning_streak_days
+      });
+    }).catch(() => {});
+  }, []);
 
   const startSolo = () => {
     navigate(`/game?mode=solo&op=${soloConfig.op}&diff=${soloConfig.diff}`);
