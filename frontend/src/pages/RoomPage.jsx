@@ -62,7 +62,7 @@ export default function RoomPage() {
         </div>
 
         <div className="config-section">
-          <label className="input-label">Elo Wager: <strong className="text-accent">{config.elo_wager} RP</strong></label>
+          <label className="input-label">Taruhan RP: <strong className="text-accent">{config.elo_wager} RP</strong></label>
           <input type="range" min={5} max={100} step={5} value={config.elo_wager}
             onChange={e => setConfig(c => ({ ...c, elo_wager: parseInt(e.target.value) }))}
             className="slider" id="slider-elo" />

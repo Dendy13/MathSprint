@@ -57,7 +57,7 @@ export default function HomePage() {
           <div className="action-card" onClick={() => navigate('/room/create')} id="btn-create-room">
             <span className="action-icon">🏠</span>
             <h3>Buat Room</h3>
-            <p className="text-muted">Tantang teman dengan Elo wager</p>
+            <p className="text-muted">Tantang teman dengan taruhan RP</p>
           </div>
         </div>
 
