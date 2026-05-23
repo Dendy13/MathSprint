@@ -15,7 +15,7 @@ from models.player import PlayerProfile
 from models.room import (
     Room, RoomConfig, RoomPlayer, RoomStatus, RoomSummary,
 )
-from services.firebase_client import get_db
+from services.firebase_client import get_firestore_client
 
 # Room code chars — exclude confusing: 0, O, I, 1, L
 _ROOM_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -28,7 +28,7 @@ def _generate_room_code() -> str:
 
 def _get_unique_room_code(max_retries: int = 10) -> str:
     """Generate a room code that doesn't collide with existing rooms in Firestore."""
-    db = get_db()
+    db = get_firestore_client()
     for _ in range(max_retries):
         code = _generate_room_code()
         doc = db.collection("rooms").document(code).get()
@@ -59,14 +59,14 @@ def initialize_room(host: PlayerProfile, config: RoomConfig) -> Room:
         created_at=datetime.utcnow(),
     )
     
-    db = get_db()
+    db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump(mode='json'))
     return room
 
 
 def get_room(room_id: str) -> Optional[Room]:
     """Ambil data room dari Firestore."""
-    db = get_db()
+    db = get_firestore_client()
     doc = db.collection("rooms").document(room_id).get()
     if not doc.exists:
         return None
@@ -92,7 +92,7 @@ def join_room(room_id: str, player: PlayerProfile) -> Room:
     )
     room.players[player.uid] = new_player
     
-    db = get_db()
+    db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return room
 
@@ -121,7 +121,7 @@ def start_game(room_id: str, requester_uid: str) -> Room:
     room.status = RoomStatus.PLAYING
     room.started_at = datetime.utcnow()
     
-    db = get_db()
+    db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return room
 
@@ -187,7 +187,7 @@ def submit_answer(
 
                 update_player(calc.player_uid, **updates)
 
-    db = get_db()
+    db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump())
     return player
 
@@ -217,7 +217,7 @@ def leave_room(room_id: str, player_uid: str) -> Optional[Room]:
         raise ValueError("Tidak bisa keluar saat game berlangsung")
 
     del room.players[player_uid]
-    db = get_db()
+    db = get_firestore_client()
     
     if len(room.players) == 0:
         db.collection("rooms").document(room_id).delete()
@@ -232,7 +232,7 @@ def leave_room(room_id: str, player_uid: str) -> Optional[Room]:
 
 def list_waiting_rooms() -> list[RoomSummary]:
     """Daftar semua room yang menunggu pemain dari Firestore."""
-    db = get_db()
+    db = get_firestore_client()
     docs = db.collection("rooms").where("status", "==", RoomStatus.WAITING.value).get()
     rooms = [Room(**doc.to_dict()) for doc in docs]
     return [get_room_summary(room) for room in rooms]
