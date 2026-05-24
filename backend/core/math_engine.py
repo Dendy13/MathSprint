@@ -251,7 +251,7 @@ def generate_question_stack(
         question = generate_math_question(op, diff)
 
         # Cek duplikasi berdasarkan kombinasi (num1, num2, op)
-        pair_key = (question.num1, question.num2, question.op.value)
+        pair_key = (question.num1, question.num2, question.op)
         if pair_key not in seen_pairs:
             seen_pairs.add(pair_key)
             questions.append(question)
