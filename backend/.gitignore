@@ -1,0 +1,22 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+ENV/
+
+# Firebase Service Account
+firebase-credentials.json
+*-adminsdk-*.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
