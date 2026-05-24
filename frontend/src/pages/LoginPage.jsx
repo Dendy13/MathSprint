@@ -9,9 +9,12 @@ import './LoginPage.css';
 export default function LoginPage() {
   const { login } = useAuth();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ username: '', password: '', account_type: 'user', teacher_token: '' });
+  const [form, setForm] = useState({ username: '', email: '', display_name: '', password: '', account_type: 'user', teacher_token: '' });
   const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotInput, setForgotInput] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -21,19 +24,37 @@ export default function LoginPage() {
     setLoading(true);
     
     // Konversi Username menjadi format Email (Firebase hanya menerima Email)
-    const formattedUsername = form.username.trim().toLowerCase().replace(/\s+/g, '');
-    const fakeEmail = `${formattedUsername}@mathsprint.local`;
+    let loginEmail = '';
+    
+    if (mode === 'login') {
+      const input = form.username.trim();
+      if (input.includes('@')) {
+        loginEmail = input; // Input is an actual email
+      } else {
+        const formattedUsername = input.toLowerCase().replace(/\s+/g, '');
+        loginEmail = `${formattedUsername}@mathsprint.local`; // Input is a username
+      }
+    } else {
+      // Register mode
+      if (form.account_type === 'teacher') {
+        loginEmail = form.email.trim();
+      } else {
+        const formattedUsername = form.username.trim().toLowerCase().replace(/\s+/g, '');
+        loginEmail = `${formattedUsername}@mathsprint.local`;
+      }
+    }
     
     try {
       if (mode === 'register') {
-        const data = { display_name: form.username, email: fakeEmail, password: form.password, account_type: form.account_type };
+        const displayName = form.account_type === 'teacher' ? form.display_name : form.username;
+        const data = { display_name: displayName, email: loginEmail, password: form.password, account_type: form.account_type };
         if (form.account_type === 'teacher') data.teacher_token = form.teacher_token;
         // Register in backend (which creates Firebase user)
         await register(data);
       }
       
       // Sign in with Firebase (for both login and after register)
-      const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, form.password);
+      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, form.password);
       
       // Get the real Firebase ID Token
       const token = await userCredential.user.getIdToken();
@@ -52,11 +73,38 @@ export default function LoginPage() {
         setError('Username atau password salah');
       } else if (err.code === 'auth/email-already-in-use') {
         setError('Username ini sudah dipakai pemain lain!');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Format email tidak valid.');
       } else {
         setError(err.message || 'Gagal masuk. Periksa kembali data kamu.');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setMsg('');
+    const input = forgotInput.trim();
+    if (!input) return;
+
+    if (input.includes('@')) {
+      try {
+        setLoading(true);
+        const { sendPasswordResetEmail } = await import('firebase/auth');
+        await sendPasswordResetEmail(auth, input);
+        setMsg('Tautan reset kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk (atau folder spam).');
+        setForgotInput('');
+      } catch (err) {
+        if (err.code === 'auth/user-not-found') setError('Email tidak terdaftar.');
+        else setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setError('Pemain tidak bisa mereset sandi sendiri. Silakan minta Guru atau Admin untuk mereset sandi akun kamu di Dasbor.');
     }
   };
 
@@ -74,15 +122,54 @@ export default function LoginPage() {
           <button className={`tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Masuk</button>
           <button className={`tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Daftar</button>
         </div>
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="input-group">
-            <label className="input-label">Username</label>
-            <input className="input" type="text" placeholder="Masukkan username" value={form.username} onChange={e => set('username', e.target.value)} required minLength={3} id="input-username" />
-          </div>
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <input className="input" type="password" placeholder="Minimal 8 karakter" value={form.password} onChange={e => set('password', e.target.value)} required minLength={8} id="input-password" />
-          </div>
+        {showForgot ? (
+          <form onSubmit={handleForgotPassword} className="login-form animate-fade-in">
+            <h3 style={{ marginBottom: 8, textAlign: 'center' }}>Lupa Sandi?</h3>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 16, textAlign: 'center' }}>
+              Masukkan Email (Guru) atau Username (Pemain) kamu.
+            </p>
+            <div className="input-group">
+              <input className="input" type="text" placeholder="Email / Username" value={forgotInput} onChange={e => setForgotInput(e.target.value)} required />
+            </div>
+            {error && <div className="error-banner">{error}</div>}
+            {msg && <div className="toast animate-fade-in" style={{ backgroundColor: 'var(--green)', color: '#fff', marginBottom: 16 }}>{msg}</div>}
+            
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} type="submit" disabled={loading}>
+                {loading ? <span className="spinner" /> : 'Kirim'}
+              </button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} type="button" onClick={() => {setShowForgot(false); setError(''); setMsg('');}}>Batal</button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="login-form animate-fade-in">
+            {mode === 'register' && form.account_type === 'teacher' ? (
+              <>
+                <div className="input-group">
+                  <label className="input-label">Email Asli</label>
+                  <input className="input" type="email" placeholder="contoh@sekolah.com" value={form.email} onChange={e => set('email', e.target.value)} required id="input-email" />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Nama Tampilan</label>
+                  <input className="input" type="text" placeholder="Contoh: Pak Budi" value={form.display_name} onChange={e => set('display_name', e.target.value)} required id="input-displayname" />
+                </div>
+              </>
+            ) : (
+              <div className="input-group">
+                <label className="input-label">{mode === 'login' ? 'Username / Email' : 'Username'}</label>
+                <input className="input" type="text" placeholder={`Masukkan ${mode === 'login' ? 'username atau email' : 'username'}`} value={form.username} onChange={e => set('username', e.target.value)} required minLength={3} id="input-username" />
+              </div>
+            )}
+            
+            <div className="input-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="input-label" style={{ marginBottom: 0 }}>Password</label>
+                {mode === 'login' && (
+                  <button type="button" className="btn-link" onClick={() => {setShowForgot(true); setError('');}} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>Lupa Sandi?</button>
+                )}
+              </div>
+              <input className="input" type="password" placeholder="Minimal 8 karakter" value={form.password} onChange={e => set('password', e.target.value)} required minLength={8} id="input-password" style={{ marginTop: 4 }}/>
+            </div>
           {mode === 'register' && (
             <>
               <div className="input-group">
@@ -110,6 +197,7 @@ export default function LoginPage() {
             {loading ? <span className="spinner" /> : mode === 'login' ? '🚀 MASUK' : '✨ DAFTAR'}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

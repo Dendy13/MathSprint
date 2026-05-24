@@ -225,4 +225,19 @@ async def modify_user(
     if not updated:
         raise HTTPException(status_code=404, detail="User tidak ditemukan.")
     
-    return {"message": "User berhasil diubah", "user": updated.model_dump()}
+@router.post("/users/{uid}/reset-password", summary="Reset sandi pemain (Admin only)")
+async def reset_user_password(
+    uid: str,
+    data: dict,
+    token: dict = Depends(require_developer)
+):
+    new_password = data.get("new_password")
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Kata sandi baru minimal 8 karakter.")
+        
+    try:
+        from firebase_admin import auth
+        auth.update_user(uid, password=new_password)
+        return {"message": "Kata sandi berhasil di-reset."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal reset sandi: {str(e)}")

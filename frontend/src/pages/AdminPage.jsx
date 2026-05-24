@@ -23,6 +23,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [editingUser, setEditingUser] = useState(null);
+  const [resettingUser, setResettingUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => { 
     if (user?.account_type === 'developer') {
@@ -111,6 +113,24 @@ export default function AdminPage() {
       setEditingUser(null);
       loadUsers();
     } catch (e) { showMsg(e.message); }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resettingUser || newPassword.length < 8) {
+      showMsg('Kata sandi baru minimal 8 karakter.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { resetUserPassword } = await import('../api/admin.js');
+      await resetUserPassword(resettingUser.uid, { new_password: newPassword });
+      showMsg('Kata sandi berhasil di-reset!');
+      setResettingUser(null);
+      setNewPassword('');
+    } catch (e) {
+      showMsg(e.message);
+    }
+    setLoading(false);
   };
 
   if (user?.account_type !== 'developer') {
@@ -278,18 +298,19 @@ export default function AdminPage() {
               </div>
               
               <div className="admin-table">
-                <div className="admin-header" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}>
+                <div className="admin-header" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 2fr' }}>
                   <span>Nama</span><span>UID</span><span>Tipe Akun</span><span>RP</span><span>Aksi</span>
                 </div>
                 {filteredUsers.length === 0 ? <div className="text-center text-muted" style={{ padding: 20 }}>Tidak ada pemain ditemukan.</div> : 
                   filteredUsers.map(u => (
-                    <div key={u.uid} className="admin-row" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}>
+                    <div key={u.uid} className="admin-row" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 2fr' }}>
                       <span style={{ fontWeight: 600 }}>{u.display_name}</span>
                       <span className="text-muted" style={{ fontSize: '0.75rem' }}>{u.uid.slice(0, 8)}...</span>
                       <span><span className={`badge badge-${u.account_type === 'developer' ? 'purple' : u.account_type === 'teacher' ? 'blue' : 'accent'}`}>{u.account_type}</span></span>
                       <span>{u.current_rank_point} RP</span>
-                      <span>
+                      <span style={{ display: 'flex', gap: 4 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => setEditingUser(u)}>Edit</button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--orange)' }} onClick={() => setResettingUser(u)}>Reset Sandi</button>
                       </span>
                     </div>
                   ))
@@ -297,6 +318,45 @@ export default function AdminPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resettingUser && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 400 }}>
+            <h2 className="modal-title">Reset Sandi Pemain</h2>
+            <p className="text-muted" style={{ marginBottom: 16, fontSize: '0.9rem' }}>
+              Ubah kata sandi untuk akun <strong>{resettingUser.display_name}</strong> secara paksa.
+            </p>
+            <div className="input-group">
+              <label className="input-label">Kata Sandi Baru</label>
+              <input
+                type="password"
+                className="input"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimal 8 karakter..."
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => { setResettingUser(null); setNewPassword(''); }}
+                disabled={loading}
+              >
+                Batal
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleResetPassword}
+                disabled={loading}
+              >
+                {loading ? 'Memproses...' : 'Reset Sandi'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
