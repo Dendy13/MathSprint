@@ -143,12 +143,13 @@ async def get_system_stats(
     token: dict = Depends(require_developer),
 ):
     from services.firebase_client import get_firestore_client
-    from core.room_engine import _rooms
     
-    active_rooms = sum(
-        1 for r in _rooms.values()
-        if r.status.value in ("waiting", "playing")
-    )
+    db = get_firestore_client()
+
+    try:
+        active_rooms = len(list(db.collection("rooms").where("status", "in", ["waiting", "playing"]).stream()))
+    except Exception:
+        active_rooms = 0
 
     db = get_firestore_client()
 
