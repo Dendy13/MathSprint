@@ -151,29 +151,25 @@ async def get_system_stats(
     )
 
     db = get_firestore_client()
-    
-    # In production with large data, counting documents requires an aggregation query
-    # or maintaining a counter document. For now, we will query count.
-    players_count_query = db.collection("players").count()
-    players_count_result = players_count_query.get()
-    total_players = players_count_result[0][0].value if players_count_result else 0
-    
-    tokens_count_query = db.collection("teacher_tokens").count()
-    tokens_count_result = tokens_count_query.get()
-    total_tokens = tokens_count_result[0][0].value if tokens_count_result else 0
-    
-    # We don't query every single document for daily active in this simple migration,
-    # as it's inefficient. Instead, we do a basic query for active today.
-    # Note: Requires composite index if complex, but simple where should work.
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    active_today_query = db.collection("players").where("last_active", ">=", today_start).count()
-    active_today_result = active_today_query.get()
-    active_today = active_today_result[0][0].value if active_today_result else 0
-    
-    # Used tokens
-    used_tokens_query = db.collection("teacher_tokens").where("is_used", "==", True).count()
-    used_tokens_result = used_tokens_query.get()
-    used_tokens = used_tokens_result[0][0].value if used_tokens_result else 0
+
+    try:
+        total_players = len(list(db.collection("players").stream()))
+    except Exception:
+        total_players = 0
+        
+    try:
+        tokens = list(db.collection("teacher_tokens").stream())
+        total_tokens = len(tokens)
+        used_tokens = sum(1 for t in tokens if t.to_dict().get("is_used", False))
+    except Exception:
+        total_tokens = 0
+        used_tokens = 0
+        
+    try:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        active_today = len(list(db.collection("players").where("last_active", ">=", today_start).stream()))
+    except Exception:
+        active_today = 0
 
     return {
         "total_players": total_players,
