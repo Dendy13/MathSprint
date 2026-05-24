@@ -315,7 +315,7 @@ export default function GamePage() {
         )}
 
         <div className="answer-area">
-          <input ref={inputRef} className="answer-input" type="text" inputMode="numeric" pattern="[0-9]*"
+          <input ref={inputRef} className="answer-input" type="text" inputMode="none" pattern="[0-9]*"
             value={inputVal} onChange={e => setInputVal(e.target.value.replace(/[^0-9-]/g, ''))}
             onKeyDown={handleKeyDown} placeholder="?" autoComplete="off" id="answer-input" />
           <span className="game-hint">tekan ENTER untuk jawab · kosongkan untuk skip</span>

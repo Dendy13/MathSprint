@@ -165,7 +165,7 @@ def get_player(uid: str) -> Optional[PlayerProfile]:
     return None
 
 
-def update_player(uid: str, **kwargs) -> Optional[PlayerProfile]:
+def update_player(uid: str, update_streak: bool = False, **kwargs) -> Optional[PlayerProfile]:
     """Update field tertentu di profil pemain di Firestore."""
     db = get_db()
     doc_ref = db.collection("players").document(uid)
@@ -174,9 +174,40 @@ def update_player(uid: str, **kwargs) -> Optional[PlayerProfile]:
     if not doc.exists:
         return None
 
-    # Filter out None values and update last_active
+    # Filter out None values
     update_data = {k: v for k, v in kwargs.items() if v is not None}
-    update_data["last_active"] = datetime.utcnow()
+    now = datetime.utcnow()
+    
+    if update_streak:
+        player_data = doc.to_dict()
+        last_active = player_data.get("last_active")
+        current_streak = player_data.get("learning_streak_days", 0)
+        
+        if last_active:
+            try:
+                if hasattr(last_active, "date"):
+                    last_date = last_active.date()
+                else:
+                    from google.api_core.datetime_helpers import DatetimeWithNanoseconds
+                    if isinstance(last_active, DatetimeWithNanoseconds):
+                        last_date = last_active.date()
+                    else:
+                        last_date = now.date()
+                
+                now_date = now.date()
+                delta_days = (now_date - last_date).days
+                
+                if delta_days == 1:
+                    update_data["learning_streak_days"] = current_streak + 1
+                elif delta_days > 1:
+                    update_data["learning_streak_days"] = 1
+                # If delta_days == 0, already played today, don't change
+            except Exception:
+                update_data["learning_streak_days"] = 1
+        else:
+            update_data["learning_streak_days"] = 1
+
+    update_data["last_active"] = now
     
     doc_ref.update(update_data)
     

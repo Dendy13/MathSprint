@@ -81,12 +81,11 @@ async def submit_solo_match(
 
     result = process_solo_match(player, data)
     
-    # Update player profile (only add small RP change, and update matches)
     updates = {
         "current_rank_point": result.new_rp,
         "total_matches": player.total_matches + 1,
     }
-    update_player(uid, **updates)
+    update_player(uid, update_streak=True, **updates)
     
     # Save to solo_scores for leaderboard using operation and difficulty as part of ID
     from services.firebase_client import get_firestore_client

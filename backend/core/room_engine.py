@@ -185,7 +185,7 @@ def submit_answer(
                 else:
                     updates["draws"] = p_profile.draws + 1
 
-                update_player(calc.player_uid, **updates)
+                update_player(calc.player_uid, update_streak=True, **updates)
 
     db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump())
