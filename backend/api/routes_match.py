@@ -80,12 +80,13 @@ async def submit_solo_match(
     }
     update_player(uid, **updates)
     
-    # Save to solo_scores for leaderboard
+    # Save to solo_scores for leaderboard using operation and difficulty as part of ID
     from services.firebase_client import get_firestore_client
     db = get_firestore_client()
     
-    # Check if there's an existing score, if new score is higher, overwrite
-    doc_ref = db.collection("solo_scores").document(uid)
+    # Check if there's an existing score for this specific category, if new score is higher, overwrite
+    doc_id = f"{uid}_{data.op.value}_{data.diff.value}"
+    doc_ref = db.collection("solo_scores").document(doc_id)
     doc = doc_ref.get()
     
     if not doc.exists or doc.to_dict().get("score", 0) < result.score:
@@ -157,6 +158,8 @@ async def get_leaderboard(
     description="Ambil top 100 skor tertinggi di mode Solo.",
 )
 async def get_solo_leaderboard(
+    op: str = "add",
+    diff: str = "easy",
     limit: int = 100,
     _uid: str = Depends(get_current_uid),
 ):
@@ -164,6 +167,13 @@ async def get_solo_leaderboard(
     from google.cloud import firestore
 
     db = get_firestore_client()
-    docs = db.collection("solo_scores").order_by("score", direction=firestore.Query.DESCENDING).limit(limit).stream()
+    docs = (
+        db.collection("solo_scores")
+        .where("op", "==", op)
+        .where("diff", "==", diff)
+        .order_by("score", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+        .stream()
+    )
     
     return [SoloMatchResult(**doc.to_dict()) for doc in docs]

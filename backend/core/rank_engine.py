@@ -265,6 +265,8 @@ def process_solo_match(player: PlayerProfile, submission: 'SoloMatchSubmission')
         old_rp=old_rp,
         new_rp=new_rp,
         rp_change=rp_change,
+        op=submission.op,
+        diff=submission.diff,
         score=score,
         correct=submission.correct,
         wrong=submission.wrong,

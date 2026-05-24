@@ -123,6 +123,8 @@ class SoloMatchResult(BaseModel):
     old_rp: int
     new_rp: int
     rp_change: int
+    op: MathOperation
+    diff: Difficulty
     score: int
     correct: int
     wrong: int

@@ -7,6 +7,8 @@ import './LeaderboardPage.css';
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('multi'); // 'multi' | 'solo'
+  const [soloOp, setSoloOp] = useState('add');
+  const [soloDiff, setSoloDiff] = useState('easy');
   const [entries, setEntries] = useState([]);
   const [soloEntries, setSoloEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,12 +21,12 @@ export default function LeaderboardPage() {
         .catch(() => {})
         .finally(() => setLoading(false));
     } else {
-      getSoloLeaderboard(100)
+      getSoloLeaderboard(soloOp, soloDiff, 100)
         .then(setSoloEntries)
         .catch(() => {})
         .finally(() => setLoading(false));
     }
-  }, [activeTab]);
+  }, [activeTab, soloOp, soloDiff]);
 
   const podiumColors = ['#f7c948', '#c0c0c0', '#cd7f32'];
   const podiumEmoji = ['👑', '🥈', '🥉'];
@@ -55,6 +57,32 @@ export default function LeaderboardPage() {
           </button>
         </div>
       </div>
+
+      {activeTab === 'solo' && (
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24, justifyContent: 'center' }}>
+          <select 
+            className="input" 
+            style={{ width: 'auto', padding: '8px 16px', borderRadius: 'var(--radius-full)', background: 'var(--surface)', border: '1px solid var(--border)' }}
+            value={soloOp} 
+            onChange={(e) => setSoloOp(e.target.value)}
+          >
+            <option value="add">➕ Tambah</option>
+            <option value="sub">➖ Kurang</option>
+            <option value="mul">✖️ Kali</option>
+            <option value="div">➗ Bagi</option>
+          </select>
+          <select 
+            className="input" 
+            style={{ width: 'auto', padding: '8px 16px', borderRadius: 'var(--radius-full)', background: 'var(--surface)', border: '1px solid var(--border)' }}
+            value={soloDiff} 
+            onChange={(e) => setSoloDiff(e.target.value)}
+          >
+            <option value="easy">🟢 Mudah</option>
+            <option value="medium">🟡 Sedang</option>
+            <option value="hard">🔴 Sulit</option>
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center" style={{ padding: 40 }}><div className="spinner spinner-lg" style={{ margin: '0 auto' }} /></div>
