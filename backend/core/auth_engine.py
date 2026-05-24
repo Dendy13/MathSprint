@@ -201,7 +201,8 @@ def update_player(uid: str, update_streak: bool = False, **kwargs) -> Optional[P
                     update_data["learning_streak_days"] = current_streak + 1
                 elif delta_days > 1:
                     update_data["learning_streak_days"] = 1
-                # If delta_days == 0, already played today, don't change
+                elif delta_days == 0 and current_streak == 0:
+                    update_data["learning_streak_days"] = 1
             except Exception:
                 update_data["learning_streak_days"] = 1
         else:
