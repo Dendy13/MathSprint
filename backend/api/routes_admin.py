@@ -10,6 +10,7 @@ GET    /admin/stats            — System statistics
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime
 
 from core.auth_engine import (
     generate_teacher_token,
