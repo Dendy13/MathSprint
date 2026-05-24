@@ -17,11 +17,27 @@ export default function WaitingRoomPage() {
     let timeoutId;
     let isMounted = true;
 
+    let hasAttemptedJoin = false;
+
     const pollRoom = async () => {
       try {
         const data = await getRoomInfo(roomId);
         if (!isMounted) return;
-        setRoom(data);
+
+        // Auto-join logic for non-host players who aren't in the room yet
+        if (user && data.host_uid !== user.uid && (!data.players || !data.players[user.uid]) && !hasAttemptedJoin) {
+          hasAttemptedJoin = true;
+          try {
+            const { joinRoom } = await import('../api/game.js');
+            const joinedData = await joinRoom(roomId);
+            if (isMounted) setRoom(joinedData);
+          } catch (joinErr) {
+            if (isMounted) setError(joinErr.response?.data?.detail || joinErr.message || 'Gagal masuk ke room ini.');
+            return;
+          }
+        } else {
+          setRoom(data);
+        }
 
         if (data.status === 'playing') {
           // Game has started! Navigate to GamePage
