@@ -8,3 +8,5 @@ export const updateSystemConfig = (data) => post('/admin/config', data);
 export const listUsers = (limit = 100) => get(`/admin/users?limit=${limit}`);
 export const updateUser = (uid, data) => patch(`/admin/users/${uid}`, data);
 export const resetUserPassword = (uid, data) => post(`/admin/users/${uid}/reset-password`, data);
+export const listRooms = (limit = 50) => get(`/admin/rooms?limit=${limit}`);
+export const deleteRoom = (roomId) => del(`/admin/rooms/${roomId}`);

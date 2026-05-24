@@ -32,6 +32,8 @@ from services.firestore_service import (
     save_system_config,
     get_all_players,
     update_player,
+    get_all_rooms,
+    delete_room,
 )
 
 router = APIRouter(prefix="/admin", tags=["Admin (Developer Only)"])
@@ -239,3 +241,23 @@ async def reset_user_password(
         return {"message": "Kata sandi berhasil di-reset."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal reset sandi: {str(e)}")
+
+
+@router.get("/rooms", summary="List all rooms")
+async def list_rooms_endpoint(
+    limit: int = 50,
+    token: dict = Depends(require_developer)
+):
+    rooms = await get_all_rooms(limit)
+    return {"rooms": [r.model_dump() for r in rooms]}
+
+
+@router.delete("/rooms/{room_id}", summary="Delete a room")
+async def delete_room_endpoint(
+    room_id: str,
+    token: dict = Depends(require_developer)
+):
+    success = await delete_room(room_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Room tidak ditemukan")
+    return {"message": "Room berhasil dihapus"}

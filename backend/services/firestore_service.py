@@ -30,7 +30,7 @@ from models.auth import TeacherToken
 # ============================================================
 # COLLECTION NAMES — Single Source of Truth
 # ============================================================
-USERS_COLLECTION = "users"
+USERS_COLLECTION = "players"
 ROOMS_COLLECTION = "rooms"
 MATCHES_COLLECTION = "matches"
 TEACHER_TOKENS_COLLECTION = "teacher_tokens"
@@ -138,6 +138,41 @@ async def get_leaderboard(limit: int = 100) -> List[LeaderboardEntry]:
         ))
 
     return entries
+
+
+# ============================================================
+# ROOM OPERATIONS (ADMIN)
+# ============================================================
+
+async def get_all_rooms(limit: int = 50) -> List[RoomSummary]:
+    """Get latest rooms for admin dashboard."""
+    db = get_firestore_client()
+    query = db.collection(ROOMS_COLLECTION).order_by("created_at", direction="DESCENDING").limit(limit)
+    
+    rooms = []
+    for doc in query.stream():
+        data = doc.to_dict()
+        players = data.get("players", {})
+        rooms.append(RoomSummary(
+            room_id=data["room_id"],
+            host_uid=data["host_uid"],
+            status=data["status"],
+            config=data["config"],
+            player_count=len(players),
+            max_players=data.get("max_players", 2),
+            created_at=data["created_at"],
+            players=players
+        ))
+    return rooms
+
+async def delete_room(room_id: str) -> bool:
+    """Forcibly delete a room."""
+    db = get_firestore_client()
+    doc_ref = db.collection(ROOMS_COLLECTION).document(room_id)
+    if not doc_ref.get().exists:
+        return False
+    doc_ref.delete()
+    return True
 
 
 # ============================================================

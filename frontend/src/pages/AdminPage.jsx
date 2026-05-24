@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createToken, listTokens, revokeToken, getSystemStats, getSystemConfig, updateSystemConfig, listUsers, updateUser } from '../api/admin.js';
+import { createToken, listTokens, revokeToken, getSystemStats, getSystemConfig, updateSystemConfig, listUsers, updateUser, listRooms, deleteRoom } from '../api/admin.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import './AdminPage.css';
 
@@ -26,6 +26,10 @@ export default function AdminPage() {
   const [resettingUser, setResettingUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
+  // Rooms Tab State
+  const [roomsList, setRoomsList] = useState([]);
+  const [roomSearch, setRoomSearch] = useState('');
+
   useEffect(() => { 
     if (user?.account_type === 'developer') {
       loadDashboardData();
@@ -35,6 +39,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === 'config' && !config) loadConfig();
     if (activeTab === 'users' && users.length === 0) loadUsers();
+    if (activeTab === 'rooms' && roomsList.length === 0) loadRooms();
   }, [activeTab]);
 
   const showMsg = (text) => {
@@ -61,6 +66,13 @@ export default function AdminPage() {
     try {
       const res = await listUsers(100);
       setUsers(res.users || []);
+    } catch (e) { showMsg(e.message); }
+  };
+
+  const loadRooms = async () => {
+    try {
+      const res = await listRooms(100);
+      setRoomsList(res.rooms || []);
     } catch (e) { showMsg(e.message); }
   };
 
@@ -133,6 +145,15 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const handleDeleteRoom = async (roomId) => {
+    if (!confirm(`Hapus room ${roomId} secara paksa?`)) return;
+    try {
+      await deleteRoom(roomId);
+      showMsg('Room berhasil dihapus.');
+      loadRooms();
+    } catch (e) { showMsg(e.message); }
+  };
+
   if (user?.account_type !== 'developer') {
     return <div className="page page-centered"><h2>⛔ Akses Ditolak</h2><p className="text-muted">Halaman ini hanya untuk Developer.</p></div>;
   }
@@ -148,6 +169,11 @@ export default function AdminPage() {
     u.uid.includes(userSearch)
   );
 
+  const filteredRooms = roomsList.filter(r => 
+    r.room_id.includes(roomSearch.toUpperCase()) || 
+    (r.host_uid && r.host_uid.includes(roomSearch))
+  );
+
   return (
     <div className="page">
       <h1 style={{ marginBottom: 8 }}>⚙️ Admin Panel</h1>
@@ -159,6 +185,7 @@ export default function AdminPage() {
         <button className={`btn btn-sm ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('dashboard')}>Statistik & Token</button>
         <button className={`btn btn-sm ${activeTab === 'config' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('config')}>Sistem Konfigurasi</button>
         <button className={`btn btn-sm ${activeTab === 'users' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('users')}>Manajemen Akun</button>
+        <button className={`btn btn-sm ${activeTab === 'rooms' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('rooms')}>Manajemen Room</button>
       </div>
 
       {/* --- DASHBOARD TAB --- */}
@@ -357,6 +384,59 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* --- ROOMS TAB --- */}
+      {activeTab === 'rooms' && (
+        <div className="tab-content animate-fade-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2>Daftar Room Aktif/Selesai</h2>
+            <button className="btn btn-secondary btn-sm" onClick={loadRooms}>🔄 Refresh</button>
+          </div>
+          
+          <input className="input" placeholder="Cari Kode Room atau UID Host..." 
+            value={roomSearch} onChange={e => setRoomSearch(e.target.value)} 
+            style={{ marginBottom: 16, width: '100%', maxWidth: 400 }} />
+            
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>KODE</th>
+                <th>Status</th>
+                <th>Pemain</th>
+                <th>Konfigurasi</th>
+                <th>Dibuat Pada</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRooms.length === 0 ? (
+                <tr><td colSpan="6" className="text-center text-muted">Tidak ada room ditemukan.</td></tr>
+              ) : filteredRooms.map(r => (
+                <tr key={r.room_id}>
+                  <td><strong style={{ fontFamily: 'monospace', letterSpacing: 2 }}>{r.room_id}</strong></td>
+                  <td>
+                    <span className={`badge ${r.status === 'waiting' ? 'badge-blue' : r.status === 'playing' ? 'badge-accent' : 'badge-green'}`}>
+                      {r.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td>{r.player_count}/{r.max_players}</td>
+                  <td>
+                    <span style={{ fontSize: '0.85rem' }}>
+                      {r.config.op.toUpperCase()} | {r.config.diff.toUpperCase()} | {r.config.question_limit} Q | {r.config.elo_wager} RP
+                    </span>
+                  </td>
+                  <td className="text-muted" style={{ fontSize: '0.85rem' }}>
+                    {new Date(r.created_at).toLocaleString('id-ID')}
+                  </td>
+                  <td>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteRoom(r.room_id)}>Hapus Paksa</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
