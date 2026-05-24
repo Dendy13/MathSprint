@@ -175,13 +175,16 @@ async def get_solo_leaderboard(
     from google.cloud import firestore
 
     db = get_firestore_client()
+    # Query without order_by to avoid Firestore Composite Index requirements
     docs = (
         db.collection("solo_scores")
         .where("op", "==", op)
         .where("diff", "==", diff)
-        .order_by("score", direction=firestore.Query.DESCENDING)
-        .limit(limit)
         .stream()
     )
     
-    return [SoloMatchResult(**doc.to_dict()) for doc in docs]
+    results = [SoloMatchResult(**doc.to_dict()) for doc in docs]
+    # Sort in memory
+    results.sort(key=lambda x: x.score, reverse=True)
+    
+    return results[:limit]
