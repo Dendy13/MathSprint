@@ -51,11 +51,30 @@ export default function ResultsPage() {
     const data = JSON.parse(raw);
     setResults(data);
 
-    // Score calculation
-    const baseScore = data.correct * 100;
-    const penalty = data.wrong * 50;
-    const streakBonus = data.maxStreak >= 3 ? (data.maxStreak - 2) * 30 : 0;
+    // Score calculation matching backend rank_engine logic
+    let base_correct_mult = 2;
+    let base_wrong_mult = 1;
+    let combo_mult = 1;
+    if (data.diff === 'medium') {
+      base_correct_mult = 3;
+      base_wrong_mult = 2;
+      combo_mult = 2;
+    } else if (data.diff === 'hard') {
+      base_correct_mult = 5;
+      base_wrong_mult = 3;
+      combo_mult = 3;
+    }
+
+    const baseScore = data.correct * base_correct_mult;
+    const penalty = data.wrong * base_wrong_mult;
+    const streakBonus = data.maxStreak * combo_mult;
+    
+    // We expect the backend score, but if not available we calculate it.
     const finalScore = data.score !== undefined ? data.score : Math.max(0, baseScore + streakBonus - penalty);
+    
+    data.base_correct_mult = base_correct_mult;
+    data.base_wrong_mult = base_wrong_mult;
+    data.combo_mult = combo_mult;
     data.baseScore = baseScore;
     data.streakBonus = streakBonus;
     data.penalty = penalty;
@@ -180,15 +199,15 @@ export default function ResultsPage() {
         {/* Score Breakdown */}
         <div className="breakdown">
           <div className="breakdown-row">
-            <span>Skor Dasar ({results.correct} benar × 100)</span>
+            <span>Skor Dasar ({results.correct} benar × {results.base_correct_mult})</span>
             <span className="text-accent">+{results.baseScore}</span>
           </div>
           <div className="breakdown-row">
-            <span>Bonus Rangkaian (max {results.maxStreak} beruntun)</span>
+            <span>Bonus Rangkaian (max {results.maxStreak} beruntun × {results.combo_mult})</span>
             <span className="text-green">+{results.streakBonus}</span>
           </div>
           <div className="breakdown-row">
-            <span>Penalti ({results.wrong} salah × 50)</span>
+            <span>Penalti ({results.wrong} salah × {results.base_wrong_mult})</span>
             <span className="text-red">-{results.penalty}</span>
           </div>
           <div className="breakdown-divider" />
