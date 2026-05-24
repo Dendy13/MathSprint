@@ -23,7 +23,15 @@ from models.auth import (
     TokenInfo,
     TokenListResponse,
 )
+from models.system import SystemConfig
+from models.player import PlayerProfile
 from services.auth_service import get_current_uid, require_developer
+from services.firestore_service import (
+    get_system_config,
+    save_system_config,
+    get_all_players,
+    update_player,
+)
 
 router = APIRouter(prefix="/admin", tags=["Admin (Developer Only)"])
 
@@ -174,3 +182,47 @@ async def get_system_stats(
         "used_teacher_tokens": used_tokens,
         "available_teacher_tokens": total_tokens - used_tokens,
     }
+
+
+@router.get("/config", response_model=SystemConfig, summary="Get system configuration")
+async def get_config_endpoint(token: dict = Depends(require_developer)):
+    config_dict = await get_system_config()
+    return SystemConfig(**config_dict)
+
+
+@router.post("/config", response_model=SystemConfig, summary="Update system configuration")
+async def update_config_endpoint(
+    data: SystemConfig,
+    token: dict = Depends(require_developer)
+):
+    await save_system_config(data.model_dump())
+    return data
+
+
+@router.get("/users", summary="List all users")
+async def list_users(
+    limit: int = 100,
+    token: dict = Depends(require_developer)
+):
+    players = await get_all_players(limit)
+    return {"users": [p.model_dump() for p in players]}
+
+
+@router.patch("/users/{uid}", summary="Modify a user")
+async def modify_user(
+    uid: str,
+    data: dict,
+    token: dict = Depends(require_developer)
+):
+    # Security: only allow modifying specific fields
+    allowed_fields = {"display_name", "account_type", "current_rank_point"}
+    filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
+    
+    if not filtered_data:
+        raise HTTPException(status_code=400, detail="Tidak ada field valid yang diubah.")
+        
+    updated = await update_player(uid, filtered_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan.")
+    
+    return {"message": "User berhasil diubah", "user": updated.model_dump()}

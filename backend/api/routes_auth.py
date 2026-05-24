@@ -52,6 +52,11 @@ async def register(data: PlayerCreate):
     - **developer**: Tidak bisa dibuat melalui endpoint ini
     """
     try:
+        from services.firestore_service import get_system_config
+        config = await get_system_config()
+        if data.account_type.value == "teacher" and not config.get("teacher_registration_enabled", True):
+            raise ValueError("Pendaftaran akun Guru sedang dinonaktifkan.")
+            
         # Create Firebase Auth user
         uid = await register_firebase_user(
             email=data.email,

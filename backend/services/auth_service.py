@@ -50,7 +50,21 @@ async def get_current_user_token(
 
     try:
         decoded_token = verify_id_token(credentials.credentials)
+        
+        # Check maintenance mode
+        from services.firestore_service import get_system_config
+        config = await get_system_config()
+        if config.get("maintenance_mode", False):
+            user_type = decoded_token.get("account_type", AccountType.USER.value)
+            if user_type != AccountType.DEVELOPER.value:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Server sedang dalam mode pemeliharaan (Maintenance Mode). Coba lagi nanti.",
+                )
+                
         return decoded_token
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

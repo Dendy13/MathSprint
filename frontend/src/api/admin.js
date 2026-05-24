@@ -1,5 +1,9 @@
-import { get, post, del } from './client.js';
+import { get, post, del, patch } from './client.js';
 export const createToken = (data) => post('/admin/token/create', data);
 export const listTokens = () => get('/admin/token/list');
 export const revokeToken = (tokenId) => del(`/admin/token/${tokenId}`);
 export const getSystemStats = () => get('/admin/stats');
+export const getSystemConfig = () => get('/admin/config');
+export const updateSystemConfig = (data) => post('/admin/config', data);
+export const listUsers = (limit = 100) => get(`/admin/users?limit=${limit}`);
+export const updateUser = (uid, data) => patch(`/admin/users/${uid}`, data);

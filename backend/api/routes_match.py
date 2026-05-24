@@ -62,6 +62,14 @@ async def submit_solo_match(
     data: SoloMatchSubmission,
     uid: str = Depends(get_current_uid),
 ):
+    from services.firestore_service import get_system_config
+    config = await get_system_config()
+    if not config.get("solo_mode_enabled", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mode Solo saat ini dinonaktifkan oleh administrator.",
+        )
+
     from core.rank_engine import process_solo_match
     
     player = get_player(uid)

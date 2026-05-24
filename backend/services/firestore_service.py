@@ -66,6 +66,49 @@ async def update_player(uid: str, data: dict) -> Optional[PlayerProfile]:
     return await get_player(uid)
 
 
+async def get_all_players(limit: int = 100) -> List[PlayerProfile]:
+    """Get all players (for admin dashboard)."""
+    db = get_firestore_client()
+    query = db.collection(USERS_COLLECTION).order_by("created_at", direction="DESCENDING").limit(limit)
+    return [PlayerProfile.model_validate(doc.to_dict()) for doc in query.stream()]
+
+
+# ============================================================
+# SYSTEM CONFIG OPERATIONS
+# ============================================================
+
+import time
+_config_cache = {"data": None, "timestamp": 0}
+
+async def get_system_config() -> dict:
+    """Get global system configuration with 60-second caching."""
+    current_time = time.time()
+    if _config_cache["data"] is not None and (current_time - _config_cache["timestamp"] < 60):
+        return _config_cache["data"]
+
+    db = get_firestore_client()
+    doc = db.collection("system").document("config").get()
+    
+    if not doc.exists:
+        config = {"maintenance_mode": False, "solo_mode_enabled": True, "teacher_registration_enabled": True}
+    else:
+        config = doc.to_dict()
+        
+    _config_cache["data"] = config
+    _config_cache["timestamp"] = current_time
+    return config
+
+
+async def save_system_config(config_data: dict) -> dict:
+    """Save system config and clear cache."""
+    db = get_firestore_client()
+    db.collection("system").document("config").set(config_data)
+    _config_cache["data"] = config_data
+    _config_cache["timestamp"] = time.time()
+    return config_data
+
+
+
 async def get_leaderboard(limit: int = 100) -> List[LeaderboardEntry]:
     """Get top players sorted by rank point."""
     db = get_firestore_client()
