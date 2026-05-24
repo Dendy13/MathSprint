@@ -59,28 +59,18 @@ export default function LeaderboardPage() {
       </div>
 
       {activeTab === 'solo' && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, justifyContent: 'center' }}>
-          <select 
-            className="input" 
-            style={{ width: 'auto', padding: '8px 16px', borderRadius: 'var(--radius-full)', background: 'var(--surface)', border: '1px solid var(--border)' }}
-            value={soloOp} 
-            onChange={(e) => setSoloOp(e.target.value)}
-          >
-            <option value="add">➕ Tambah</option>
-            <option value="sub">➖ Kurang</option>
-            <option value="mul">✖️ Kali</option>
-            <option value="div">➗ Bagi</option>
-          </select>
-          <select 
-            className="input" 
-            style={{ width: 'auto', padding: '8px 16px', borderRadius: 'var(--radius-full)', background: 'var(--surface)', border: '1px solid var(--border)' }}
-            value={soloDiff} 
-            onChange={(e) => setSoloDiff(e.target.value)}
-          >
-            <option value="easy">🟢 Mudah</option>
-            <option value="medium">🟡 Sedang</option>
-            <option value="hard">🔴 Sulit</option>
-          </select>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 'var(--radius-full)', border: '1px solid var(--border)', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button className={`btn ${soloOp === 'add' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('add')}>➕ Tambah</button>
+            <button className={`btn ${soloOp === 'sub' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('sub')}>➖ Kurang</button>
+            <button className={`btn ${soloOp === 'mul' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('mul')}>✖️ Kali</button>
+            <button className={`btn ${soloOp === 'div' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('div')}>➗ Bagi</button>
+          </div>
+          <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 'var(--radius-full)', border: '1px solid var(--border)', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button className={`btn ${soloDiff === 'easy' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloDiff('easy')}>🟢 Mudah</button>
+            <button className={`btn ${soloDiff === 'medium' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloDiff('medium')}>🟡 Sedang</button>
+            <button className={`btn ${soloDiff === 'hard' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloDiff('hard')}>🔴 Sulit</button>
+          </div>
         </div>
       )}
 
