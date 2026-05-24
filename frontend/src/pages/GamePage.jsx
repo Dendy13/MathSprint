@@ -149,7 +149,7 @@ export default function GamePage() {
 
     // Submit to backend asynchronously if multiplayer
     if (mode === 'multi' && roomId && userAns !== null) {
-      apiSubmitAnswer(roomId, { question_index: currentIdx, answer: userAns }).catch(() => {});
+      apiSubmitAnswer(roomId, { room_id: roomId, question_index: currentIdx, answer: userAns }).catch(() => {});
     }
 
     setInputVal('');
