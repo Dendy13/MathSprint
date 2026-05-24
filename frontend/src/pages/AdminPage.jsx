@@ -287,6 +287,24 @@ export default function AdminPage() {
               {config.teacher_registration_enabled ? 'ON' : 'OFF'}
             </button>
           </div>
+          <div className="config-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+            <div>
+              <h4 style={{ marginBottom: 4 }}>Mode Duel (Matchmaking)</h4>
+              <p className="text-muted" style={{ fontSize: '0.85rem' }}>Aktifkan fitur pencarian lawan otomatis.</p>
+            </div>
+            <button className={`btn ${config.matchmaking_enabled ? 'btn-green' : 'btn-red'}`} onClick={() => handleToggleConfig('matchmaking_enabled')}>
+              {config.matchmaking_enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          <div className="config-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+            <div>
+              <h4 style={{ marginBottom: 4 }}>Pilihan Custom Duel</h4>
+              <p className="text-muted" style={{ fontSize: '0.85rem' }}>Izinkan pemain memilih operasi & kesulitan saat duel. Jika OFF, gunakan default (Tambah, Medium).</p>
+            </div>
+            <button className={`btn ${config.matchmaking_allow_custom_config ? 'btn-green' : 'btn-red'}`} onClick={() => handleToggleConfig('matchmaking_allow_custom_config')}>
+              {config.matchmaking_allow_custom_config ? 'ON' : 'OFF'}
+            </button>
+          </div>
         </div>
       )}
 

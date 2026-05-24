@@ -14,3 +14,19 @@ class SystemConfig(BaseModel):
         default=True, 
         description="Buka atau tutup form pendaftaran akun Guru dengan token."
     )
+    matchmaking_enabled: bool = Field(
+        default=False,
+        description="Aktifkan fitur Duel (Matchmaking)."
+    )
+    matchmaking_allow_custom_config: bool = Field(
+        default=False,
+        description="Izinkan pemain memilih operasi dan kesulitan saat Duel. Jika mati, gunakan fixed_op dan fixed_diff."
+    )
+    matchmaking_fixed_op: str = Field(
+        default="add",
+        description="Operasi default untuk Duel jika custom config dimatikan."
+    )
+    matchmaking_fixed_diff: str = Field(
+        default="medium",
+        description="Kesulitan default untuk Duel jika custom config dimatikan."
+    )

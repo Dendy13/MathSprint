@@ -134,6 +134,10 @@ class Room(BaseModel):
         default=None,
         description="Hasil kalkulasi Elo rating (MatchResult dump) setelah game selesai"
     )
+    is_matchmaking: bool = Field(
+        default=False,
+        description="Menandakan apakah room ini adalah room matchmaking publik"
+    )
     
     model_config = {"use_enum_values": True}
 

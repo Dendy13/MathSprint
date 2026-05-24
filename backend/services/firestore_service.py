@@ -90,7 +90,15 @@ async def get_system_config() -> dict:
     doc = db.collection("system").document("config").get()
     
     if not doc.exists:
-        config = {"maintenance_mode": False, "solo_mode_enabled": True, "teacher_registration_enabled": True}
+        config = {
+            "maintenance_mode": False, 
+            "solo_mode_enabled": True, 
+            "teacher_registration_enabled": True,
+            "matchmaking_enabled": False,
+            "matchmaking_allow_custom_config": False,
+            "matchmaking_fixed_op": "add",
+            "matchmaking_fixed_diff": "medium"
+        }
     else:
         config = doc.to_dict()
         

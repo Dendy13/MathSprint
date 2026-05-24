@@ -10,3 +10,4 @@ export const getRoomQuestions = (roomId) => get(`/game/room/${roomId}/questions`
 export const getWaitingRooms = () => get(`/game/rooms?_t=${Date.now()}`);
 export const leaveRoom = (roomId) => post(`/game/room/${roomId}/leave`);
 export const getMatchResult = (roomId) => get(`/match/result/${roomId}?_t=${Date.now()}`);
+export const matchmake = (data) => post('/game/matchmake', data);

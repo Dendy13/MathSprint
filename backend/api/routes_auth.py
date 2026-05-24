@@ -181,3 +181,17 @@ async def get_public_profile(
         losses=profile.losses,
         learning_streak_days=profile.learning_streak_days,
     )
+
+@router.get(
+    "/config",
+    summary="Get public system config",
+    description="Mengembalikan konfigurasi sistem untuk frontend (seperti status fitur).",
+)
+async def get_public_config():
+    from services.firestore_service import get_system_config
+    config = await get_system_config()
+    return {
+        "matchmaking_enabled": config.get("matchmaking_enabled", False),
+        "matchmaking_allow_custom_config": config.get("matchmaking_allow_custom_config", False),
+        "solo_mode_enabled": config.get("solo_mode_enabled", True)
+    }

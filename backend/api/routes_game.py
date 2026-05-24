@@ -303,3 +303,57 @@ async def leave_existing_room(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+@router.post(
+    "/matchmake",
+    response_model=Room,
+    summary="Cari lawan Duel (Matchmaking)",
+    description="Bergabung dengan room matchmaking yang sedang menunggu, atau buat room baru jika belum ada.",
+)
+async def matchmake_duel(
+    req: RoomCreate,
+    uid: str = Depends(get_current_uid),
+):
+    from services.firestore_service import get_system_config
+    from services.firebase_client import get_firestore_client
+    
+    config = await get_system_config()
+    if not config.get("matchmaking_enabled", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Fitur Duel (Matchmaking) sedang dinonaktifkan.")
+        
+    op = req.op
+    diff = req.diff
+    
+    if not config.get("matchmaking_allow_custom_config", False):
+        op = config.get("matchmaking_fixed_op", "add")
+        diff = config.get("matchmaking_fixed_diff", "medium")
+        
+    db = get_firestore_client()
+    docs = db.collection("rooms").where("is_matchmaking", "==", True).where("status", "==", "waiting").stream()
+    
+    room_to_join = None
+    for doc in docs:
+        r = Room(**doc.to_dict())
+        if r.config.op == op and r.config.diff == diff and len(r.players) < r.max_players:
+            if uid not in r.players:
+                room_to_join = r
+                break
+                
+    player = get_player(uid)
+    if not player:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profil tidak ditemukan")
+        
+    if room_to_join:
+        try:
+            return join_room(room_to_join.room_id, player)
+        except Exception:
+            pass # Fallback to create new room if join failed
+            
+    # Create new room
+    from models.room import RoomConfig
+    room_config = RoomConfig(
+        op=op, diff=diff, question_limit=req.question_limit, 
+        elo_wager=req.elo_wager, time_limit_seconds=req.time_limit_seconds
+    )
+    return initialize_room(player, room_config, is_matchmaking=True)
+

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getProfile } from '../api/auth.js';
+import { getProfile, getSystemConfig } from '../api/auth.js';
+import { matchmake } from '../api/game.js';
 import { formatRP, formatWinRate, getRankTier } from '../utils/helpers.js';
 import { OP_LABELS, OP_SYMBOLS, OP_COLORS, DIFF_LABELS, DIFF_COLORS } from '../utils/constants.js';
 import './HomePage.css';
@@ -12,8 +13,12 @@ export default function HomePage() {
   const tier = getRankTier(user?.current_rank_point || 1200);
 
   const [soloConfig, setSoloConfig] = useState({ op: 'add', diff: 'easy' });
+  const [duelConfig, setDuelConfig] = useState({ op: 'add', diff: 'medium' });
   const [roomCode, setRoomCode] = useState('');
   const [showSolo, setShowSolo] = useState(false);
+  const [showDuel, setShowDuel] = useState(false);
+  const [sysConfig, setSysConfig] = useState({});
+  const [loadingDuel, setLoadingDuel] = useState(false);
 
   useEffect(() => {
     // Sinkronisasi data terbaru dari server agar stat di menu utama akurat
@@ -26,10 +31,25 @@ export default function HomePage() {
         learning_streak_days: data.learning_streak_days
       });
     }).catch(() => {});
+    
+    getSystemConfig().then(data => setSysConfig(data)).catch(() => {});
   }, []);
 
   const startSolo = () => {
     navigate(`/game?mode=solo&op=${soloConfig.op}&diff=${soloConfig.diff}`);
+  };
+
+  const startDuel = async () => {
+    setLoadingDuel(true);
+    try {
+      const config = sysConfig.matchmaking_allow_custom_config ? duelConfig : { op: sysConfig.matchmaking_fixed_op || 'add', diff: sysConfig.matchmaking_fixed_diff || 'medium' };
+      const room = await matchmake({ ...config, question_limit: 10, elo_wager: 25, time_limit_seconds: 60 });
+      navigate(`/room/${room.room_id}`);
+    } catch (err) {
+      alert(err.message || 'Gagal memulai Duel');
+    } finally {
+      setLoadingDuel(false);
+    }
   };
 
   return (
@@ -47,7 +67,6 @@ export default function HomePage() {
           {[
             { label: 'Rank Point', value: formatRP(user?.current_rank_point || 1200), color: tier.color, icon: '🏅' },
             { label: 'Total Match', value: user?.total_matches || 0, color: 'var(--blue)', icon: '⚔️' },
-            { label: 'Win Rate', value: `${formatWinRate(user?.wins || 0, user?.total_matches || 0)}%`, color: 'var(--green)', icon: '📊' },
             { label: 'Streak', value: `${user?.learning_streak_days || 0} hari`, color: 'var(--orange)', icon: '🔥' },
           ].map(s => (
             <div key={s.label} className="stat-card">
@@ -63,7 +82,14 @@ export default function HomePage() {
       <div className="home-actions animate-slide-up">
         <h2 style={{ marginBottom: 16 }}>Mulai Bermain</h2>
         <div className="grid-2">
-          <div className="action-card" onClick={() => setShowSolo(!showSolo)} id="btn-solo">
+          {sysConfig.matchmaking_enabled && (
+            <div className="action-card" onClick={() => { setShowDuel(!showDuel); setShowSolo(false); }} id="btn-duel">
+              <span className="action-icon">⚔️</span>
+              <h3>Duel (Matchmaking)</h3>
+              <p className="text-muted">Cari lawan otomatis</p>
+            </div>
+          )}
+          <div className="action-card" onClick={() => { setShowSolo(!showSolo); setShowDuel(false); }} id="btn-solo">
             <span className="action-icon">🎮</span>
             <h3>Latihan Solo</h3>
             <p className="text-muted">Latihan mandiri tanpa lawan</p>
@@ -78,7 +104,7 @@ export default function HomePage() {
         {/* Solo Config */}
         {showSolo && (
           <div className="solo-config animate-fade-in">
-            <h3 style={{ marginBottom: 12 }}>Pilih Soal</h3>
+            <h3 style={{ marginBottom: 12 }}>Konfigurasi Solo</h3>
             <div className="config-section">
               <span className="input-label">Operasi</span>
               <div className="op-grid">
@@ -105,6 +131,47 @@ export default function HomePage() {
               </div>
             </div>
             <button className="btn btn-primary btn-full" onClick={startSolo} id="btn-start-solo">🚀 Mulai Latihan</button>
+          </div>
+        )}
+
+        {/* Duel Config */}
+        {showDuel && sysConfig.matchmaking_enabled && (
+          <div className="solo-config animate-fade-in">
+            <h3 style={{ marginBottom: 12 }}>Mencari Lawan...</h3>
+            {sysConfig.matchmaking_allow_custom_config ? (
+              <>
+                <div className="config-section">
+                  <span className="input-label">Operasi</span>
+                  <div className="op-grid">
+                    {Object.entries(OP_LABELS).map(([k, v]) => (
+                      <button key={k} className={`op-btn ${duelConfig.op === k ? 'active' : ''}`}
+                        style={{ '--op-color': OP_COLORS[k] }}
+                        onClick={() => setDuelConfig(c => ({ ...c, op: k }))}>
+                        <span className="op-symbol">{OP_SYMBOLS[k]}</span>
+                        <span>{v}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="config-section">
+                  <span className="input-label">Kesulitan</span>
+                  <div className="diff-grid">
+                    {Object.entries(DIFF_LABELS).map(([k, v]) => (
+                      <button key={k} className={`diff-btn ${duelConfig.diff === k ? 'active' : ''}`}
+                        style={{ '--diff-color': DIFF_COLORS[k] }}
+                        onClick={() => setDuelConfig(c => ({ ...c, diff: k }))}>
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted" style={{ marginBottom: 20 }}>Mode Duel saat ini menggunakan konfigurasi default server.</p>
+            )}
+            <button className="btn btn-primary btn-full" onClick={startDuel} disabled={loadingDuel} id="btn-start-duel">
+              {loadingDuel ? 'Mencari...' : '⚔️ Cari Lawan Sekarang'}
+            </button>
           </div>
         )}
 

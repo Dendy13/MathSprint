@@ -83,7 +83,6 @@ async def submit_solo_match(
     
     updates = {
         "current_rank_point": result.new_rp,
-        "total_matches": player.total_matches + 1,
     }
     update_player(uid, update_streak=True, **updates)
     

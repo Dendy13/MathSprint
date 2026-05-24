@@ -45,6 +45,16 @@ export default function WaitingRoomPage() {
           return;
         }
 
+        // Auto start if matchmaking and full
+        if (data.is_matchmaking && Object.keys(data.players || {}).length >= data.max_players && data.host_uid === user?.uid) {
+           try {
+             const { startGame } = await import('../api/game.js');
+             await startGame(roomId);
+           } catch (e) {
+             // Ignore, let next poll handle or show error elsewhere
+           }
+        }
+
         // Poll again in 2 seconds
         timeoutId = setTimeout(pollRoom, 2000);
       } catch (err) {
@@ -147,17 +157,25 @@ export default function WaitingRoomPage() {
   return (
     <div className="waiting-room-page animate-fade-in">
       <h1>Lobi Tunggu</h1>
-      <p className="text-muted">Berikan kode ini kepada temanmu</p>
-
-      <div className="room-code-display">
-        <h2>KODE ROOM</h2>
-        <div className="code-box" onClick={() => {
-          navigator.clipboard.writeText(room.room_id);
-          alert('Kode disalin!');
-        }}>
-          {room.room_id}
+      
+      {room.is_matchmaking ? (
+        <div style={{ marginBottom: 32, marginTop: 16 }}>
+          <h2 className="text-accent animate-pulse">Mencari Lawan...</h2>
         </div>
-      </div>
+      ) : (
+        <>
+          <p className="text-muted">Berikan kode ini kepada temanmu</p>
+          <div className="room-code-display">
+            <h2>KODE ROOM</h2>
+            <div className="code-box" onClick={() => {
+              navigator.clipboard.writeText(room.room_id);
+              alert('Kode disalin!');
+            }}>
+              {room.room_id}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="players-list">
         {slots}
