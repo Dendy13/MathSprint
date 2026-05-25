@@ -37,11 +37,12 @@ steps:
       - '--cpu=1'
       - '--min-instances=0'
       - '--max-instances=3'
-      - '--set-env-vars=ENVIRONMENT=production'
+      - '--set-env-vars=ENVIRONMENT=production,CORS_ORIGINS=$_CORS_ORIGINS'
       - '--quiet'
 
 substitutions:
   _REGION: 'asia-southeast2'
+  _CORS_ORIGINS: 'https://mathsprint-frontend-447876034135.asia-southeast2.run.app,https://mathsprint-447876034135.asia-southeast2.run.app'
 
 options:
   logging: CLOUD_LOGGING_ONLY
