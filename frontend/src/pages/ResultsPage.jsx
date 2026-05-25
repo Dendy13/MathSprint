@@ -164,14 +164,16 @@ export default function ResultsPage() {
           
           <p className="text-muted">{OP_LABELS[multiResult?.op] || 'Multiplayer'} • {DIFF_LABELS[multiResult?.diff] || 'Match'}</p>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--surface)', padding: 16, borderRadius: 'var(--radius)', marginTop: 24 }}>
-            <div style={{ textAlign: 'left' }}>
+          <div style={{ display: 'flex', gap: 16, marginTop: 24 }}>
+            <div className={`result-player-card ${isWinner ? 'winner' : ''}`} style={{ flex: 1, textAlign: 'left', padding: 16, background: 'var(--surface)', borderRadius: 'var(--radius)', border: isWinner ? '1px solid var(--green)' : '1px solid var(--border)' }}>
               <div className="text-muted" style={{ fontSize: '0.85rem' }}>PEMAIN</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: isWinner ? 'var(--green)' : 'inherit' }}>{actualMyCalc.display_name}</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: isWinner ? 'var(--green)' : 'inherit', marginBottom: 8 }}>{actualMyCalc.display_name}</div>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>{actualMyCalc.old_rp} → {actualMyCalc.new_rp} RP</div>
             </div>
-            <div style={{ textAlign: 'right' }}>
+            <div className={`result-player-card ${!isWinner && !isDraw ? 'winner' : ''}`} style={{ flex: 1, textAlign: 'right', padding: 16, background: 'var(--surface)', borderRadius: 'var(--radius)', border: !isWinner && !isDraw ? '1px solid var(--green)' : '1px solid var(--border)' }}>
               <div className="text-muted" style={{ fontSize: '0.85rem' }}>LAWAN</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: !isWinner && !isDraw ? 'var(--green)' : 'inherit' }}>{actualOppCalc.display_name}</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: !isWinner && !isDraw ? 'var(--green)' : 'inherit', marginBottom: 8 }}>{actualOppCalc.display_name}</div>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>{actualOppCalc.old_rp} → {actualOppCalc.new_rp} RP</div>
             </div>
           </div>
 

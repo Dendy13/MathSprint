@@ -40,17 +40,15 @@ export default function LeaderboardPage() {
           <h1 style={{ marginBottom: 8 }}>🏆 Peringkat</h1>
           <p className="text-muted">Top pemain MathSprint</p>
         </div>
-        <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 'var(--radius-full)', border: '1px solid var(--border)' }}>
+        <div className="lb-filter-group">
           <button 
-            className={`btn ${activeTab === 'multi' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ borderRadius: 'var(--radius-full)', padding: '8px 20px' }}
+            className={`btn lb-filter-btn ${activeTab === 'multi' ? 'btn-primary' : 'btn-ghost'}`} 
             onClick={() => setActiveTab('multi')}
           >
             ⚔️ Multiplayer
           </button>
           <button 
-            className={`btn ${activeTab === 'solo' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ borderRadius: 'var(--radius-full)', padding: '8px 20px' }}
+            className={`btn lb-filter-btn ${activeTab === 'solo' ? 'btn-primary' : 'btn-ghost'}`} 
             onClick={() => setActiveTab('solo')}
           >
             🏃 Solo 60s
@@ -60,16 +58,16 @@ export default function LeaderboardPage() {
 
       {activeTab === 'solo' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 'var(--radius-full)', border: '1px solid var(--border)', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button className={`btn ${soloOp === 'add' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('add')}>➕ Tambah</button>
-            <button className={`btn ${soloOp === 'sub' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('sub')}>➖ Kurang</button>
-            <button className={`btn ${soloOp === 'mul' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('mul')}>✖️ Kali</button>
-            <button className={`btn ${soloOp === 'div' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloOp('div')}>➗ Bagi</button>
+          <div className="lb-filter-group">
+            <button className={`btn lb-filter-btn small ${soloOp === 'add' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloOp('add')}>➕ Tambah</button>
+            <button className={`btn lb-filter-btn small ${soloOp === 'sub' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloOp('sub')}>➖ Kurang</button>
+            <button className={`btn lb-filter-btn small ${soloOp === 'mul' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloOp('mul')}>✖️ Kali</button>
+            <button className={`btn lb-filter-btn small ${soloOp === 'div' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloOp('div')}>➗ Bagi</button>
           </div>
-          <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 'var(--radius-full)', border: '1px solid var(--border)', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button className={`btn ${soloDiff === 'easy' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloDiff('easy')}>🟢 Mudah</button>
-            <button className={`btn ${soloDiff === 'medium' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloDiff('medium')}>🟡 Sedang</button>
-            <button className={`btn ${soloDiff === 'hard' ? 'btn-primary' : 'btn-ghost'}`} style={{ borderRadius: 'var(--radius-full)', padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setSoloDiff('hard')}>🔴 Sulit</button>
+          <div className="lb-filter-group">
+            <button className={`btn lb-filter-btn small ${soloDiff === 'easy' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloDiff('easy')}>🟢 Mudah</button>
+            <button className={`btn lb-filter-btn small ${soloDiff === 'medium' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloDiff('medium')}>🟡 Sedang</button>
+            <button className={`btn lb-filter-btn small ${soloDiff === 'hard' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSoloDiff('hard')}>🔴 Sulit</button>
           </div>
         </div>
       )}

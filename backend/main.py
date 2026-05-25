@@ -21,7 +21,14 @@ Stack:
 Docs: http://localhost:8080/docs (Swagger UI)
 """
 
+import logging
 import os
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -41,7 +48,7 @@ app = FastAPI(
         "dengan sistem Rank (Elo Rating), Room multiplayer, Friend System, "
         "dan 3-tier account management."
     ),
-    version="2.0.0",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
@@ -121,7 +128,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "mathsprint-backend",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "environment": os.getenv("ENVIRONMENT", "development"),
     }
 
@@ -144,7 +151,7 @@ async def detailed_health():
     return {
         "status": "healthy",
         "service": "mathsprint-backend",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "environment": os.getenv("ENVIRONMENT", "development"),
         "firebase": firebase_status,
         "cors_origins": cors_origins,
@@ -163,16 +170,16 @@ async def startup_event():
     Di local dev, ini membaca serviceAccountKey.json dari path di .env.
     """
     environment = os.getenv("ENVIRONMENT", "development")
-    print(f"🚀 MathSprint Backend v2.0.0 starting in {environment} mode...")
+    logging.info("🚀 MathSprint Backend v2.1.0 starting in %s mode...", environment)
 
     # Initialize Firebase (optional — will fail gracefully if no credentials)
     try:
         from services.firebase_client import initialize_firebase
         initialize_firebase()
-        print("✅ Firebase initialized successfully")
+        logging.info("✅ Firebase initialized successfully")
     except Exception as e:
-        print(f"⚠️  Firebase initialization skipped: {e}")
-        print("   Running in stateless/mock mode (in-memory stores)")
+        logging.warning("⚠️  Firebase initialization skipped: %s", e)
+        logging.warning("   Running in stateless/mock mode (in-memory stores)")
 
-    print(f"📚 API docs: http://localhost:{os.getenv('PORT', '8080')}/docs")
-    print(f"🌐 CORS origins: {cors_origins}")
+    logging.info("📚 API docs: http://localhost:%s/docs", os.getenv('PORT', '8080'))
+    logging.info("🌐 CORS origins: %s", cors_origins)

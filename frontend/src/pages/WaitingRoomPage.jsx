@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getRoomInfo, startGame, leaveRoom } from '../api/game.js';
+import { OP_LABELS, DIFF_LABELS } from '../utils/constants.js';
 import './WaitingRoomPage.css';
 
 export default function WaitingRoomPage() {
@@ -195,6 +196,12 @@ export default function WaitingRoomPage() {
               alert('Kode disalin!');
             }}>
               {room.room_id}
+            </div>
+            <div className="room-config-pills">
+              <span className="badge badge-accent">{OP_LABELS[room.config.op]}</span>
+              <span className="badge badge-blue">{DIFF_LABELS[room.config.diff]}</span>
+              <span className="badge badge-green">{room.config.question_limit} Soal</span>
+              <span className="badge badge-purple">{room.config.time_limit_seconds} Detik</span>
             </div>
           </div>
         </>

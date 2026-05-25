@@ -109,3 +109,11 @@
   50% { opacity: 1; }
   100% { opacity: 0.6; }
 }
+
+.room-config-pills {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}

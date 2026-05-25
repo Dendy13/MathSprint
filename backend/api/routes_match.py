@@ -14,8 +14,11 @@ from core.rank_engine import process_match_result
 from core.room_engine import get_room
 from models.match import LeaderboardEntry, MatchHistory, MatchResult, MatchSubmission, SoloMatchSubmission, SoloMatchResult
 from models.room import RoomStatus
+from models.player import PlayerProfile
 from services.auth_service import get_current_uid
 from core.auth_engine import get_player, update_player
+from services.firebase_client import get_firestore_client
+from google.cloud import firestore
 
 router = APIRouter(prefix="/match", tags=["Match & Ranking"])
 
@@ -130,10 +133,6 @@ async def get_leaderboard(
     limit: int = 100,
     _uid: str = Depends(get_current_uid),
 ):
-    from services.firebase_client import get_firestore_client
-    from google.cloud import firestore
-    from models.player import PlayerProfile
-
     db = get_firestore_client()
     docs = db.collection("players").order_by("current_rank_point", direction=firestore.Query.DESCENDING).limit(limit).stream()
     
@@ -169,9 +168,6 @@ async def get_solo_leaderboard(
     limit: int = 100,
     _uid: str = Depends(get_current_uid),
 ):
-    from services.firebase_client import get_firestore_client
-    from google.cloud import firestore
-
     db = get_firestore_client()
     # Query without order_by to avoid Firestore Composite Index requirements
     docs = (

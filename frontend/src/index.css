@@ -546,3 +546,56 @@ table.admin-table tbody tr:last-child td {
   .card { padding: 16px; }
   .btn { padding: 12px 20px; font-size: 0.9rem; }
 }
+
+/* --- Modal (Global) --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  animation: slideUp 0.3s ease-out;
+}
+
+.modal-title {
+  margin-bottom: 24px;
+  font-family: var(--font-display);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* --- Badge & Stat Micro-Animations --- */
+.badge {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.badge:hover {
+  transform: scale(1.05);
+}
+
+.stat-card {
+  transition: all var(--transition);
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
+}
+

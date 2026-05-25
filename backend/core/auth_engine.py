@@ -52,7 +52,7 @@ def generate_teacher_token(
     )
 
     db = get_db()
-    db.collection("teacher_tokens").document(token_id).set(token.dict())
+    db.collection("teacher_tokens").document(token_id).set(token.model_dump())
     return token
 
 
@@ -89,7 +89,7 @@ def use_teacher_token(token_value: str, teacher_uid: str, teacher_name: str) -> 
     token.used_at = datetime.utcnow()
 
     db = get_db()
-    db.collection("teacher_tokens").document(token.token_id).set(token.dict())
+    db.collection("teacher_tokens").document(token.token_id).set(token.model_dump())
     return True
 
 
@@ -109,7 +109,7 @@ def revoke_teacher_token(token_id: str, developer_uid: str) -> bool:
         return False
 
     token.is_revoked = True
-    doc_ref.set(token.dict())
+    doc_ref.set(token.model_dump())
     return True
 
 
@@ -159,7 +159,7 @@ def create_player_profile(
     )
 
     db = get_db()
-    db.collection("players").document(uid).set(profile.dict())
+    db.collection("players").document(uid).set(profile.model_dump())
     return profile
 
 

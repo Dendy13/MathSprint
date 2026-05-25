@@ -5,7 +5,7 @@ import { getRankTier } from '../utils/helpers.js';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('stats');
@@ -54,7 +54,6 @@ export default function ProfilePage() {
         current_rank_point: data.current_rank_point,
         total_matches: data.total_matches,
         wins: data.wins,
-        losses: data.losses,
         losses: data.losses,
         learning_streak_days: data.learning_streak_days,
         my_teacher_code: data.my_teacher_code,
@@ -221,11 +220,11 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
-        <button className={`btn btn-ghost ${activeTab === 'stats' ? 'text-accent' : ''}`} onClick={() => setActiveTab('stats')} style={{ borderBottom: activeTab === 'stats' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>📊 Statistik</button>
-        {user?.account_type === 'teacher' && <button className={`btn btn-ghost ${activeTab === 'teacher' ? 'text-accent' : ''}`} onClick={() => setActiveTab('teacher')} style={{ borderBottom: activeTab === 'teacher' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>👨‍🏫 Dasbor Guru</button>}
-        {user?.account_type === 'user' && <button className={`btn btn-ghost ${activeTab === 'teacher' ? 'text-accent' : ''}`} onClick={() => setActiveTab('teacher')} style={{ borderBottom: activeTab === 'teacher' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>🏫 Kelas & Guru</button>}
-        <button className={`btn btn-ghost ${activeTab === 'settings' ? 'text-accent' : ''}`} onClick={() => setActiveTab('settings')} style={{ borderBottom: activeTab === 'settings' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>⚙️ Pengaturan</button>
+      <div className="profile-tabs">
+        <button className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Statistik</button>
+        {user?.account_type === 'teacher' && <button className={`profile-tab ${activeTab === 'teacher' ? 'active' : ''}`} onClick={() => setActiveTab('teacher')}>👨‍🏫 Dasbor Guru</button>}
+        {user?.account_type === 'user' && <button className={`profile-tab ${activeTab === 'teacher' ? 'active' : ''}`} onClick={() => setActiveTab('teacher')}>🏫 Kelas & Guru</button>}
+        <button className={`profile-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Pengaturan</button>
       </div>
 
       {activeTab === 'stats' && (
@@ -263,13 +262,13 @@ export default function ProfilePage() {
 
       {/* Teacher Section */}
       {activeTab === 'teacher' && (
-        <div style={{ marginTop: 16 }}>
+        <div className="teacher-section">
         {user?.account_type === 'teacher' && stats.my_teacher_code && (
-          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+          <div className="card teacher-card">
             <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-chalkboard-user" style={{ marginRight: 8 }}></i> Dasbor Guru</h3>
             <p className="text-muted" style={{ marginBottom: 16 }}>Bagikan kode ini kepada siswa Anda agar mereka dapat menautkan akunnya.</p>
-            <div className="uid-container" style={{ justifyContent: 'flex-start', background: 'rgba(0,0,0,0.2)', padding: '12px 16px' }}>
-              <span className="uid-label" style={{ fontSize: '1.2rem' }}>KODE GURU:</span>
+            <div className="teacher-code-display">
+              <span className="uid-label" style={{ fontSize: '1.2rem', margin: 0 }}>KODE GURU:</span>
               <span className="uid-value" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: 2 }}>{stats.my_teacher_code}</span>
               <button className="btn btn-sm btn-secondary" onClick={() => navigator.clipboard.writeText(stats.my_teacher_code)}>Salin Kode</button>
             </div>
@@ -310,7 +309,7 @@ export default function ProfilePage() {
         )}
 
         {user?.account_type === 'user' && (
-          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+          <div className="card teacher-card">
             <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-school" style={{ marginRight: 8 }}></i> Kelas & Guru</h3>
             {stats.linked_teacher_codes && stats.linked_teacher_codes.length > 0 ? (
               <div style={{ marginBottom: 20 }}>
@@ -325,7 +324,7 @@ export default function ProfilePage() {
 
             <div style={{ borderTop: stats.linked_teacher_codes?.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: stats.linked_teacher_codes?.length > 0 ? 20 : 0 }}>
               <p className="text-muted" style={{ marginBottom: 12 }}>Tautkan akun ini ke Guru Anda menggunakan Kode Guru.</p>
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div className="student-link-form">
                 <input 
                   type="text" 
                   className="input" 
@@ -351,15 +350,11 @@ export default function ProfilePage() {
       )}
 
       {activeTab === 'settings' && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <div className="settings-content">
           <button className="btn btn-secondary" onClick={() => setIsChangingPassword(true)} style={{ width: 250 }}>
             🔒 Ubah Kata Sandi
           </button>
-          <button className="btn btn-ghost" onClick={() => {
-            const { logout } = require('../context/AuthContext.jsx'); // fallback
-            // We use the logout from useAuth instead
-            document.getElementById('btn-logout')?.click();
-          }} style={{ width: 250, color: 'var(--red)' }}>
+          <button className="btn btn-ghost" onClick={() => logout()} style={{ width: 250, color: 'var(--red)' }}>
             <i className="fa-solid fa-right-from-bracket" style={{ marginRight: 8 }}></i> Keluar Akun
           </button>
         </div>

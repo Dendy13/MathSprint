@@ -35,6 +35,7 @@ from services.firestore_service import (
     get_all_rooms,
     delete_room,
 )
+from services.firebase_client import get_firestore_client
 
 router = APIRouter(prefix="/admin", tags=["Admin (Developer Only)"])
 
@@ -144,8 +145,6 @@ async def revoke_token(
 async def get_system_stats(
     token: dict = Depends(require_developer),
 ):
-    from services.firebase_client import get_firestore_client
-    
     db = get_firestore_client()
 
     try:

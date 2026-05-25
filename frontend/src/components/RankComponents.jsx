@@ -25,7 +25,7 @@ export function RankProgress({ rp }) {
     return (
       <div className="rank-progress-container">
         <div className="rank-progress-labels">
-          <span className="text-muted">Max Rank Reached</span>
+          <span className="text-muted">Peringkat Tertinggi!</span>
         </div>
         <div className="rank-progress-bar">
           <div className="rank-progress-fill" style={{ width: '100%', background: tier.color }}></div>
@@ -38,7 +38,7 @@ export function RankProgress({ rp }) {
     <div className="rank-progress-container">
       <div className="rank-progress-labels">
         <span style={{ color: tier.color, fontWeight: 'bold' }}>{tier.fullName}</span>
-        <span className="text-muted" style={{ fontSize: '0.85rem' }}>{Math.floor(tier.nextRp - rp)} RP to rank up</span>
+        <span className="text-muted" style={{ fontSize: '0.85rem' }}>{Math.floor(tier.nextRp - rp)} RP untuk naik peringkat</span>
       </div>
       <div className="rank-progress-bar">
         <div 

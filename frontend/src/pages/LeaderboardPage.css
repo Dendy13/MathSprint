@@ -41,3 +41,25 @@
   .lb-header, .lb-row { grid-template-columns: 40px 1fr 80px 60px; }
   .lb-header span:last-child, .lb-row span:last-child { display: none; }
 }
+
+/* Filters */
+.lb-filter-group {
+  display: flex;
+  background: var(--surface);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lb-filter-btn {
+  border-radius: var(--radius-full);
+  padding: 8px 20px;
+  font-size: 0.9rem;
+}
+
+.lb-filter-btn.small {
+  padding: 6px 12px;
+}
+
