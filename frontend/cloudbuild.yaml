@@ -3,25 +3,25 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/mathsprint-frontend:$SHORT_SHA'
+      - 'gcr.io/$PROJECT_ID/mathsprint:$SHORT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/mathsprint-frontend:latest'
+      - 'gcr.io/$PROJECT_ID/mathsprint:latest'
       - '.'
     dir: 'frontend'
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/mathsprint-frontend:$SHORT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/mathsprint:$SHORT_SHA']
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/mathsprint-frontend:latest']
+    args: ['push', 'gcr.io/$PROJECT_ID/mathsprint:latest']
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - 'mathsprint-frontend'
-      - '--image=gcr.io/$PROJECT_ID/mathsprint-frontend:$SHORT_SHA'
+      - 'mathsprint'
+      - '--image=gcr.io/$PROJECT_ID/mathsprint:$SHORT_SHA'
       - '--platform=managed'
       - '--region=$_REGION'
       - '--allow-unauthenticated'
