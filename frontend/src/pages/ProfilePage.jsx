@@ -344,6 +344,7 @@ export default function ProfilePage() {
               </div>
               {teacherCodeError && <p className="error-text" style={{ marginTop: 8 }}>{teacherCodeError}</p>}
               {teacherCodeSuccess && <p className="success-text" style={{ marginTop: 8, color: 'var(--green)' }}>{teacherCodeSuccess}</p>}
+            </div>
           </div>
         )}
       </div>

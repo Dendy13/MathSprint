@@ -129,6 +129,19 @@ async def get_profile(uid: str = Depends(get_current_uid)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profil tidak ditemukan. Pastikan akun sudah terdaftar.",
         )
+        
+    # Auto-generate teacher code for existing teacher accounts that don't have one
+    if profile.account_type == AccountType.TEACHER and not profile.my_teacher_code:
+        import uuid
+        from services.firebase_client import get_firestore_client
+        db = get_firestore_client()
+        
+        short_id = str(uuid.uuid4()).upper()[:6]
+        code = f"TEACH-{short_id}"
+        
+        profile.my_teacher_code = code
+        db.collection("players").document(uid).update({"my_teacher_code": code})
+        
     return profile
 
 
