@@ -149,6 +149,7 @@ async def create_room(
 )
 async def join_existing_room(
     room_id: str,
+    role: str = "player",
     uid: str = Depends(get_current_uid),
 ):
     """Bergabung ke room. Memerlukan autentikasi."""
@@ -160,7 +161,7 @@ async def join_existing_room(
         )
 
     try:
-        room = join_room(room_id.upper(), player)
+        room = join_room(room_id.upper(), player, role=role)
         return get_room_summary(room)
     except ValueError as e:
         raise HTTPException(

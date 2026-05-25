@@ -142,11 +142,20 @@ def create_player_profile(
     if data.account_type == AccountType.DEVELOPER:
         raise ValueError("Akun developer tidak bisa dibuat melalui registrasi biasa")
 
+    my_teacher_code = None
+    if data.account_type == AccountType.TEACHER:
+        # Generate a unique teacher code, e.g., TEACH-ABC12
+        import random
+        import string
+        suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        my_teacher_code = f"TEACH-{suffix}"
+
     profile = PlayerProfile(
         uid=uid,
         display_name=data.display_name,
         email=data.email,
         account_type=data.account_type,
+        my_teacher_code=my_teacher_code,
     )
 
     db = get_db()

@@ -28,6 +28,8 @@ export default function GamePage() {
   const [feedback, setFeedback] = useState(null);
   const [opponent, setOpponent] = useState(null);
   const [waitingOpponent, setWaitingOpponent] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
+  const [roomData, setRoomData] = useState(null);
   const inputRef = useRef(null);
 
   const onTimerExpire = useCallback(() => {
@@ -47,9 +49,16 @@ export default function GamePage() {
     const loadQuestions = async () => {
       try {
         if (mode === 'multi' && roomId) {
-          const qs = await getRoomQuestions(roomId);
-          setQuestions(qs);
-          setAnswers(new Array(qs.length).fill(null));
+          const roomInfo = await getRoomInfo(roomId);
+          const spectatorCheck = roomInfo.spectators && roomInfo.spectators[user?.uid];
+          setIsSpectator(!!spectatorCheck);
+          setRoomData(roomInfo);
+
+          if (!spectatorCheck) {
+            const qs = await getRoomQuestions(roomId);
+            setQuestions(qs);
+            setAnswers(new Array(qs.length).fill(null));
+          }
         } else {
           // Endless Solo Mode: Fetch 100 questions
           const { getQuestionStack } = await import('../api/game.js');
@@ -62,7 +71,7 @@ export default function GamePage() {
       }
     };
     loadQuestions();
-  }, [op, diff, mode, roomId]);
+  }, [op, diff, mode, roomId, user]);
 
   // Polling Opponent in Multiplayer
   useEffect(() => {
@@ -72,30 +81,40 @@ export default function GamePage() {
     let timeoutId;
     let isMounted = true;
 
-    const pollOpponent = async () => {
+    const pollRoomState = async () => {
       try {
         const room = await getRoomInfo(roomId);
         if (!isMounted) return;
+        setRoomData(room);
 
-        // Find opponent
-        const players = Object.values(room.players);
-        const opp = players.find(p => p.uid !== user?.uid);
-        if (opp) setOpponent(opp);
+        if (!isSpectator) {
+          // Find opponent
+          const players = Object.values(room.players || {});
+          const opp = players.find(p => p.uid !== user?.uid);
+          if (opp) setOpponent(opp);
 
-        // Check if room is finished (meaning both finished)
-        if (room.status === 'finished' && phase === 'finished') {
-           navigate(`/results?mode=multi&roomId=${roomId}`);
+          // Check if room is finished (meaning both finished)
+          if (room.status === 'finished' && phase === 'finished') {
+             navigate(`/results?mode=multi&roomId=${roomId}`);
+          } else {
+             timeoutId = setTimeout(pollRoomState, 2000);
+          }
         } else {
-           timeoutId = setTimeout(pollOpponent, 2000);
+          // If Spectator, keep polling until room is finished, then wait a bit
+          if (room.status === 'finished') {
+             setTimeout(() => navigate(`/room/${roomId}`), 5000); // Back to waiting room or somewhere
+          } else {
+             timeoutId = setTimeout(pollRoomState, 2000);
+          }
         }
       } catch (e) {
-        if (isMounted) timeoutId = setTimeout(pollOpponent, 3000);
+        if (isMounted) timeoutId = setTimeout(pollRoomState, 3000);
       }
     };
-    pollOpponent();
+    pollRoomState();
 
     return () => { isMounted = false; clearTimeout(timeoutId); };
-  }, [mode, roomId, phase, navigate, user]);
+  }, [mode, roomId, phase, navigate, user, isSpectator]);
 
   // Countdown
   useEffect(() => {
@@ -180,7 +199,7 @@ export default function GamePage() {
       return;
     }
 
-    let oldRp = user?.current_rank_point || 1200;
+    let oldRp = user?.current_rank_point ?? 100;
     let newRp = oldRp;
     let rpChange = 0;
     let score = 0;
@@ -216,6 +235,37 @@ export default function GamePage() {
 
   const q = questions[currentIdx];
   const progress = questions.length > 0 ? ((currentIdx) / questions.length) * 100 : 0;
+
+  // Spectator Screen
+  if (isSpectator) {
+    const players = Object.values(roomData?.players || {});
+    return (
+      <div className="game-page" style={{ padding: 20 }}>
+        <h2 style={{ textAlign: 'center', marginBottom: 20 }}>👀 Spectator Mode</h2>
+        <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {players.map((p, idx) => (
+            <div key={p.uid} className="card" style={{ flex: '1 1 300px', padding: 20, textAlign: 'center' }}>
+              <h3>{p.display_name}</h3>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', margin: '16px 0', color: 'var(--accent)' }}>
+                {p.score || 0}
+              </div>
+              {p.finished_at ? (
+                <span className="badge badge-green">SELESAI</span>
+              ) : (
+                <span className="badge badge-accent">BERMAIN</span>
+              )}
+            </div>
+          ))}
+        </div>
+        {roomData?.status === 'finished' && (
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <h3 className="text-green">Game Selesai!</h3>
+            <p className="text-muted">Kembali ke room dalam beberapa detik...</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Countdown Screen
   if (phase === 'countdown') {

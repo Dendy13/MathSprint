@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { updateProfile, getProfile } from '../api/auth.js';
+import { updateProfile, getProfile, linkTeacher, getTeacherStudents } from '../api/auth.js';
+import { getRankTier } from '../utils/helpers.js';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
@@ -21,13 +22,23 @@ export default function ProfilePage() {
   const [passMsg, setPassMsg] = useState('');
   const [savingPass, setSavingPass] = useState(false);
 
+  // Teacher Code state
+  const [teacherCodeInput, setTeacherCodeInput] = useState('');
+  const [teacherCodeError, setTeacherCodeError] = useState('');
+  const [teacherCodeSuccess, setTeacherCodeSuccess] = useState('');
+  const [linkingTeacher, setLinkingTeacher] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
   // Stats from backend
   const [stats, setStats] = useState({
-    current_rank_point: 1200,
+    current_rank_point: 100,
     total_matches: 0,
     wins: 0,
     losses: 0,
-    learning_streak_days: 0
+    learning_streak_days: 0,
+    my_teacher_code: null,
+    linked_teacher_codes: []
   });
 
   useEffect(() => {
@@ -43,8 +54,16 @@ export default function ProfilePage() {
         total_matches: data.total_matches,
         wins: data.wins,
         losses: data.losses,
-        learning_streak_days: data.learning_streak_days
+        losses: data.losses,
+        learning_streak_days: data.learning_streak_days,
+        my_teacher_code: data.my_teacher_code,
+        linked_teacher_codes: data.linked_teacher_codes || []
       });
+      
+      if (data.account_type === 'teacher' && data.my_teacher_code) {
+        loadStudents();
+      }
+
       // Sync auth context if needed
       if (data.display_name !== user?.display_name) {
         updateUser({ display_name: data.display_name });
@@ -61,6 +80,36 @@ export default function ProfilePage() {
     navigator.clipboard.writeText(user.uid);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const loadStudents = async () => {
+    setLoadingStudents(true);
+    try {
+      const data = await getTeacherStudents();
+      setStudents(data);
+    } catch (err) {
+      console.error('Gagal memuat daftar siswa', err);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleLinkTeacher = async () => {
+    const code = teacherCodeInput.trim().toUpperCase();
+    if (!code) return;
+    setLinkingTeacher(true);
+    setTeacherCodeError('');
+    setTeacherCodeSuccess('');
+    try {
+      const res = await linkTeacher({ teacher_code: code });
+      setTeacherCodeSuccess(res.message);
+      setStats(prev => ({ ...prev, linked_teacher_codes: res.linked_teacher_codes }));
+      setTeacherCodeInput('');
+    } catch (err) {
+      setTeacherCodeError(err.response?.data?.detail || err.message || 'Gagal menautkan kode guru');
+    } finally {
+      setLinkingTeacher(false);
+    }
   };
 
   const handleEditClick = () => {
@@ -203,6 +252,93 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Teacher Section */}
+      <div style={{ marginTop: 40 }}>
+        {user?.account_type === 'teacher' && stats.my_teacher_code && (
+          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+            <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-chalkboard-user" style={{ marginRight: 8 }}></i> Dasbor Guru</h3>
+            <p className="text-muted" style={{ marginBottom: 16 }}>Bagikan kode ini kepada siswa Anda agar mereka dapat menautkan akunnya.</p>
+            <div className="uid-container" style={{ justifyContent: 'flex-start', background: 'rgba(0,0,0,0.2)', padding: '12px 16px' }}>
+              <span className="uid-label" style={{ fontSize: '1.2rem' }}>KODE GURU:</span>
+              <span className="uid-value" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: 2 }}>{stats.my_teacher_code}</span>
+              <button className="btn btn-sm btn-secondary" onClick={() => navigator.clipboard.writeText(stats.my_teacher_code)}>Salin Kode</button>
+            </div>
+            
+            <h4 style={{ marginTop: 24, marginBottom: 12 }}>Daftar Siswa Tertaut ({students.length})</h4>
+            {loadingStudents ? (
+              <div className="spinner" style={{ width: 20, height: 20, margin: '20px auto' }}></div>
+            ) : students.length > 0 ? (
+              <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Siswa</th>
+                      <th>Rank</th>
+                      <th>Matches</th>
+                      <th>Win Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map(s => {
+                      const t = getRankTier(s.current_rank_point);
+                      return (
+                        <tr key={s.uid}>
+                          <td style={{ fontWeight: 600 }}>{s.display_name}</td>
+                          <td><span style={{ color: t.color, fontWeight: 700 }}><i className={`fa-solid ${t.icon}`} style={{ marginRight: 4 }}></i> {t.fullName}</span></td>
+                          <td>{s.total_matches}</td>
+                          <td>{s.win_rate}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted">Belum ada siswa yang menautkan kode Anda.</p>
+            )}
+          </div>
+        )}
+
+        {user?.account_type === 'user' && (
+          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+            <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-school" style={{ marginRight: 8 }}></i> Kelas & Guru</h3>
+            {stats.linked_teacher_codes && stats.linked_teacher_codes.length > 0 ? (
+              <div style={{ marginBottom: 20 }}>
+                <p className="text-muted" style={{ marginBottom: 8 }}>Akun Anda telah ditautkan dengan Kode Guru:</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {stats.linked_teacher_codes.map(code => (
+                    <span key={code} className="badge badge-accent" style={{ fontSize: '1rem', padding: '6px 12px' }}>{code}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div style={{ borderTop: stats.linked_teacher_codes?.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: stats.linked_teacher_codes?.length > 0 ? 20 : 0 }}>
+              <p className="text-muted" style={{ marginBottom: 12 }}>Tautkan akun ini ke Guru Anda menggunakan Kode Guru.</p>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="Contoh: TEACH-ABC12" 
+                  value={teacherCodeInput}
+                  onChange={e => setTeacherCodeInput(e.target.value.toUpperCase())}
+                  style={{ textTransform: 'uppercase', flex: 1 }}
+                />
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleLinkTeacher} 
+                  disabled={linkingTeacher || !teacherCodeInput.trim()}
+                >
+                  {linkingTeacher ? 'Menautkan...' : 'Tautkan'}
+                </button>
+              </div>
+              {teacherCodeError && <p className="error-text" style={{ marginTop: 8 }}>{teacherCodeError}</p>}
+              {teacherCodeSuccess && <p className="success-text" style={{ marginTop: 8, color: 'var(--green)' }}>{teacherCodeSuccess}</p>}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
         <button className="btn btn-ghost" onClick={() => setIsChangingPassword(true)}>

@@ -11,6 +11,8 @@ export default function WaitingRoomPage() {
   const [room, setRoom] = useState(null);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [rolePrompt, setRolePrompt] = useState(false);
+  const [hasAttemptedJoin, setHasAttemptedJoin] = useState(false);
 
   // Polling room status
   useEffect(() => {
@@ -25,11 +27,20 @@ export default function WaitingRoomPage() {
         if (!isMounted) return;
 
         // Auto-join logic for non-host players who aren't in the room yet
-        if (user && data.host_uid !== user.uid && (!data.players || !data.players[user.uid]) && !hasAttemptedJoin) {
-          hasAttemptedJoin = true;
+        const isPlayer = data.players && data.players[user?.uid];
+        const isSpectator = data.spectators && data.spectators[user?.uid];
+        
+        if (user && data.host_uid !== user.uid && !isPlayer && !isSpectator && !hasAttemptedJoin) {
+          if (user.account_type === 'teacher') {
+            setRolePrompt(true);
+            setRoom(data);
+            return;
+          }
+          
+          setHasAttemptedJoin(true);
           try {
             const { joinRoom } = await import('../api/game.js');
-            const joinedData = await joinRoom(roomId);
+            const joinedData = await joinRoom(roomId, 'player');
             if (isMounted) setRoom(joinedData);
           } catch (joinErr) {
             if (isMounted) setError(joinErr.response?.data?.detail || joinErr.message || 'Gagal masuk ke room ini.');
@@ -74,7 +85,19 @@ export default function WaitingRoomPage() {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [roomId, navigate]);
+  }, [roomId, navigate, user, hasAttemptedJoin]);
+
+  const handleJoinWithRole = async (role) => {
+    setRolePrompt(false);
+    setHasAttemptedJoin(true);
+    try {
+      const { joinRoom } = await import('../api/game.js');
+      const joinedData = await joinRoom(roomId, role);
+      setRoom(joinedData);
+    } catch (joinErr) {
+      setError(joinErr.response?.data?.detail || joinErr.message || 'Gagal masuk ke room ini.');
+    }
+  };
 
   const handleStart = async () => {
     if (!room || room.player_count < 2) return;
@@ -200,6 +223,25 @@ export default function WaitingRoomPage() {
           </button>
         )}
       </div>
+
+      {rolePrompt && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ textAlign: 'center' }}>
+            <h2 className="modal-title">Bergabung ke Room</h2>
+            <p className="text-muted" style={{ marginBottom: 24 }}>Anda masuk sebagai Guru. Pilih peran Anda di room ini:</p>
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
+              <button className="btn btn-primary" onClick={() => handleJoinWithRole('player')}>
+                <i className="fa-solid fa-gamepad" style={{ marginBottom: 8, fontSize: '1.5rem', display: 'block' }}></i>
+                Ikut Bermain
+              </button>
+              <button className="btn btn-secondary" onClick={() => handleJoinWithRole('spectator')} style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-eye" style={{ marginBottom: 8, fontSize: '1.5rem', display: 'block' }}></i>
+                Hanya Memantau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

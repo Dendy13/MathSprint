@@ -41,9 +41,9 @@ class PlayerProfile(BaseModel):
         description="Tipe akun: user, teacher, atau developer"
     )
     current_rank_point: int = Field(
-        default=1200,
+        default=100,
         ge=0,
-        description="Rank Point (RP) saat ini, default 1200 (Elo baseline)"
+        description="Rank Point (RP) saat ini, default 100 (Elo baseline)"
     )
     total_matches: int = Field(
         default=0,
@@ -61,6 +61,14 @@ class PlayerProfile(BaseModel):
     friends_list: List[str] = Field(
         default_factory=list,
         description="Daftar UID teman yang sudah accepted"
+    )
+    linked_teacher_codes: List[str] = Field(
+        default_factory=list,
+        description="Daftar kode guru yang ditautkan oleh siswa"
+    )
+    my_teacher_code: Optional[str] = Field(
+        default=None,
+        description="Kode unik guru untuk memantau siswa (khusus teacher)"
     )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,

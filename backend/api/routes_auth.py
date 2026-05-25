@@ -195,3 +195,68 @@ async def get_public_config():
         "matchmaking_allow_custom_config": config.get("matchmaking_allow_custom_config", False),
         "solo_mode_enabled": config.get("solo_mode_enabled", True)
     }
+
+from pydantic import BaseModel
+
+class LinkTeacherRequest(BaseModel):
+    teacher_code: str
+
+@router.post(
+    "/link-teacher",
+    summary="Tautkan akun ke Guru",
+)
+async def link_teacher(
+    data: LinkTeacherRequest,
+    uid: str = Depends(get_current_uid),
+):
+    from services.firebase_client import get_firestore_client
+    db = get_firestore_client()
+    
+    # Verify teacher code exists
+    teachers = db.collection("players").where("my_teacher_code", "==", data.teacher_code).limit(1).stream()
+    teacher_doc = None
+    for t in teachers:
+        teacher_doc = t
+    
+    if not teacher_doc:
+        raise HTTPException(status_code=404, detail="Kode Guru tidak ditemukan")
+        
+    profile = get_player(uid)
+    if data.teacher_code in profile.linked_teacher_codes:
+        raise HTTPException(status_code=400, detail="Kode Guru sudah ditautkan")
+        
+    profile.linked_teacher_codes.append(data.teacher_code)
+    db.collection("players").document(uid).update({"linked_teacher_codes": profile.linked_teacher_codes})
+    
+    return {"status": "success", "message": "Berhasil menautkan Kode Guru", "linked_teacher_codes": profile.linked_teacher_codes}
+
+@router.get(
+    "/teacher/students",
+    summary="Ambil daftar siswa yang menautkan kode guru ini",
+)
+async def get_teacher_students(
+    uid: str = Depends(get_current_uid),
+):
+    profile = get_player(uid)
+    if profile.account_type != AccountType.TEACHER:
+        raise HTTPException(status_code=403, detail="Hanya guru yang dapat mengakses data ini")
+        
+    if not profile.my_teacher_code:
+        return []
+        
+    from services.firebase_client import get_firestore_client
+    db = get_firestore_client()
+    students_docs = db.collection("players").where("linked_teacher_codes", "array_contains", profile.my_teacher_code).stream()
+    
+    students = []
+    for doc in students_docs:
+        d = doc.to_dict()
+        students.append({
+            "uid": d.get("uid"),
+            "display_name": d.get("display_name"),
+            "current_rank_point": d.get("current_rank_point", 100),
+            "total_matches": d.get("total_matches", 0),
+            "win_rate": round((d.get("wins", 0) / d.get("total_matches", 1)) * 100, 1) if d.get("total_matches", 0) > 0 else 0.0
+        })
+        
+    return students

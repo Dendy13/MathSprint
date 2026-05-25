@@ -9,7 +9,7 @@ export default function Navbar() {
   const location = useLocation();
   if (!user) return null;
 
-  const tier = getRankTier(user.current_rank_point || 1200);
+  const tier = getRankTier(user.current_rank_point ?? 100);
   const navLinks = [
     { to: '/', label: '🏠 Beranda', id: 'nav-home' },
     { to: '/leaderboard', label: '🏆 Peringkat', id: 'nav-leaderboard' },
@@ -40,7 +40,7 @@ export default function Navbar() {
             <div className="user-info">
               <span className="user-name">{user.display_name}</span>
               <span className="user-rp" style={{ color: tier.color }}>
-                {formatRP(user.current_rank_point || 1200)} RP
+                {formatRP(user.current_rank_point ?? 100)} RP
               </span>
             </div>
           </Link>

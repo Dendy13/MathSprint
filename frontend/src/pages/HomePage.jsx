@@ -5,12 +5,14 @@ import { getProfile, getSystemConfig } from '../api/auth.js';
 import { matchmake } from '../api/game.js';
 import { formatRP, formatWinRate, getRankTier } from '../utils/helpers.js';
 import { OP_LABELS, OP_SYMBOLS, OP_COLORS, DIFF_LABELS, DIFF_COLORS } from '../utils/constants.js';
+import { RankBadge, RankProgress } from '../components/RankComponents.jsx';
 import './HomePage.css';
 
 export default function HomePage() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
-  const tier = getRankTier(user?.current_rank_point || 1200);
+  const currentRp = user?.current_rank_point ?? 100;
+  const tier = getRankTier(currentRp);
 
   const [soloConfig, setSoloConfig] = useState({ op: 'add', diff: 'easy' });
   const [duelConfig, setDuelConfig] = useState({ op: 'add', diff: 'medium' });
@@ -57,15 +59,15 @@ export default function HomePage() {
       {/* Hero */}
       <div className="home-hero animate-fade-in">
         <div className="hero-left">
-          <span className="hero-tier-badge" style={{ color: tier.color, borderColor: tier.color }}>
-            {tier.emoji} {tier.name}
-          </span>
+          <div style={{ marginBottom: 16 }}>
+            <RankBadge rp={currentRp} size="lg" />
+          </div>
           <h1>Halo, <span className="text-accent">{user?.display_name || 'Player'}</span>!</h1>
           <p className="text-muted">Siap untuk tantangan hari ini?</p>
         </div>
         <div className="hero-stats">
           {[
-            { label: 'Rank Point', value: formatRP(user?.current_rank_point || 1200), color: tier.color, icon: <i className="fa-solid fa-medal"></i> },
+            { label: 'Rank Point', value: formatRP(user?.current_rank_point ?? 100), color: tier.color, icon: <i className="fa-solid fa-medal"></i> },
             { label: 'Total Match', value: user?.total_matches || 0, color: 'var(--blue)', icon: <i className="fa-solid fa-bolt"></i> },
             { label: 'Streak', value: `${user?.learning_streak_days || 0} hari`, color: 'var(--orange)', icon: <i className="fa-solid fa-fire"></i> },
           ].map(s => (
@@ -75,6 +77,9 @@ export default function HomePage() {
               <span className="stat-label">{s.label}</span>
             </div>
           ))}
+          <div style={{ gridColumn: '1 / -1', marginTop: 12 }}>
+            <RankProgress rp={currentRp} />
+          </div>
         </div>
       </div>
 

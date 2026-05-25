@@ -17,6 +17,8 @@ export default function ResultsPage() {
   const [multiResult, setMultiResult] = useState(null);
   const [loading, setLoading] = useState(mode === 'multi');
   const [animatedScore, setAnimatedScore] = useState(0);
+  const [showRankUp, setShowRankUp] = useState(false);
+  const [rankUpData, setRankUpData] = useState(null);
 
   // 1. Polling for Multiplayer Match Result
   useEffect(() => {
@@ -41,6 +43,21 @@ export default function ResultsPage() {
     pollResult();
     return () => { isMounted = false; clearTimeout(timeoutId); };
   }, [mode, roomId]);
+
+  // Check for Rank Up
+  useEffect(() => {
+    if (multiResult && user) {
+      const myCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.winner_calculation : multiResult.loser_calculation;
+      const oldTier = getRankTier(myCalc.old_rp);
+      const newTier = getRankTier(myCalc.new_rp);
+      
+      if (myCalc.rp_change > 0 && (oldTier.name !== newTier.name || oldTier.division !== newTier.division)) {
+        setRankUpData(newTier);
+        setShowRankUp(true);
+        setTimeout(() => setShowRankUp(false), 4500); // Hide after 4.5s
+      }
+    }
+  }, [multiResult, user]);
 
   // 2. Load Solo Results from SessionStorage
   useEffect(() => {
@@ -118,7 +135,24 @@ export default function ResultsPage() {
     const actualOppCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.loser_calculation : multiResult.winner_calculation;
 
     return (
-      <div className="page page-centered">
+      <div className="page page-centered" style={{ position: 'relative' }}>
+        
+        {showRankUp && rankUpData && (
+          <div className="rank-up-overlay">
+            <div className="rank-up-content">
+              <h1 className="rank-up-title text-accent">RANK UP!</h1>
+              <div className="rank-badge-lg" style={{ borderColor: rankUpData.color, background: 'rgba(22, 33, 62, 0.95)' }}>
+                <div className="rank-icon" style={{ color: rankUpData.color, textShadow: `0 0 20px ${rankUpData.color}80` }}>
+                  <i className={`fa-solid ${rankUpData.icon}`}></i>
+                </div>
+                <div className="rank-info" style={{ textAlign: 'left' }}>
+                  <span className="rank-name" style={{ color: rankUpData.color }}>{rankUpData.fullName}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="results-card animate-slide-up" style={{ textAlign: 'center' }}>
           
           <h1 style={{ fontSize: '3rem', margin: '0 0 16px 0', color: isDraw ? 'var(--text)' : isWinner ? 'var(--green)' : 'var(--red)' }}>

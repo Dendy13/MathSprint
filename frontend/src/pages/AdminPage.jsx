@@ -119,7 +119,7 @@ export default function AdminPage() {
       await updateUser(editingUser.uid, {
         display_name: editingUser.display_name,
         account_type: editingUser.account_type,
-        current_rank_point: parseInt(editingUser.current_rank_point) || 1200
+        current_rank_point: parseInt(editingUser.current_rank_point) || 100
       });
       showMsg('Akun berhasil diubah!');
       setEditingUser(null);

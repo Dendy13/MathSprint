@@ -74,24 +74,37 @@ def get_room(room_id: str) -> Optional[Room]:
     return Room(**doc.to_dict())
 
 
-def join_room(room_id: str, player: PlayerProfile) -> Room:
-    """Pemain bergabung ke room yang sudah ada di Firestore."""
+def join_room(room_id: str, player: PlayerProfile, role: str = "player") -> Room:
+    """
+    Bergabung ke room yang sudah ada. Validasi kuota dan status room.
+    Jika role == "spectator", masuk ke daftar spectators.
+    """
     room = get_room(room_id)
     if room is None:
         raise ValueError(f"Room '{room_id}' tidak ditemukan")
     if room.status != RoomStatus.WAITING:
         raise ValueError(f"Room '{room_id}' sudah dimulai atau selesai (status: {room.status})")
-    if len(room.players) >= room.max_players:
-        raise ValueError(f"Room '{room_id}' sudah penuh ({room.max_players} pemain)")
-    if player.uid in room.players:
-        raise ValueError(f"Pemain '{player.display_name}' sudah ada di room")
+        
+    if role == "spectator":
+        if player.uid in room.spectators:
+            raise ValueError(f"Guru '{player.display_name}' sudah memantau room ini")
+        from models.room import RoomSpectator
+        room.spectators[player.uid] = RoomSpectator(
+            uid=player.uid,
+            display_name=player.display_name
+        )
+    else:
+        if len(room.players) >= room.max_players:
+            raise ValueError(f"Room '{room_id}' sudah penuh ({room.max_players} pemain)")
+        if player.uid in room.players:
+            raise ValueError(f"Pemain '{player.display_name}' sudah ada di room")
 
-    new_player = RoomPlayer(
-        uid=player.uid,
-        display_name=player.display_name,
-        rp_before=player.current_rank_point,
-    )
-    room.players[player.uid] = new_player
+        new_player = RoomPlayer(
+            uid=player.uid,
+            display_name=player.display_name,
+            rp_before=player.current_rank_point,
+        )
+        room.players[player.uid] = new_player
     
     db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump())

@@ -25,7 +25,7 @@ from models.room import Room, RoomPlayer
 
 # Constants
 K_FACTOR: int = 32
-ELO_BASE: int = 1200
+ELO_BASE: int = 100
 
 DIFFICULTY_MULTIPLIER: dict[str, float] = {
     Difficulty.EASY: 0.8,

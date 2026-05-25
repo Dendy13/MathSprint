@@ -55,6 +55,14 @@ class RoomConfig(BaseModel):
     model_config = {"use_enum_values": True}
 
 
+class RoomSpectator(BaseModel):
+    """
+    Model untuk guru yang hanya memantau jalannya room tanpa ikut bermain.
+    """
+    uid: str = Field(..., description="Firebase UID spectator")
+    display_name: str = Field(..., description="Nama tampilan")
+    joined_at: datetime = Field(default_factory=datetime.utcnow)
+
 class RoomPlayer(BaseModel):
     """
     State seorang pemain di dalam room.
@@ -71,7 +79,7 @@ class RoomPlayer(BaseModel):
         description="Index soal yang sedang dikerjakan"
     )
     rp_before: int = Field(
-        default=1200,
+        default=100,
         description="Rank Point sebelum match (untuk kalkulasi Elo)"
     )
     is_finished: bool = Field(
@@ -104,6 +112,10 @@ class Room(BaseModel):
     players: Dict[str, RoomPlayer] = Field(
         default_factory=dict,
         description="Map UID → RoomPlayer untuk setiap pemain di room"
+    )
+    spectators: Dict[str, RoomSpectator] = Field(
+        default_factory=dict,
+        description="Map UID → RoomSpectator untuk guru yang memantau"
     )
     question_stack: List[MathQuestion] = Field(
         default_factory=list,
