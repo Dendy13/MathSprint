@@ -176,7 +176,7 @@ export default function AdminPage() {
 
   return (
     <div className="page">
-      <h1 style={{ marginBottom: 8 }}>⚙️ Admin Panel</h1>
+      <h1 style={{ marginBottom: 8 }}><i className="fa-solid fa-gear" style={{ marginRight: 8 }}></i> Admin Panel</h1>
       <p className="text-muted" style={{ marginBottom: 24 }}>Kelola sistem MathSprint</p>
 
       {msg && <div className="toast animate-fade-in" style={{ marginBottom: 16, display: 'inline-block' }}>{msg}</div>}
@@ -194,10 +194,10 @@ export default function AdminPage() {
           {stats && (
             <div className="grid-4" style={{ marginBottom: 32 }}>
               {[
-                { l: 'Total Pemain', v: stats.total_players, i: '👥', c: 'var(--blue)' },
-                { l: 'Room Aktif', v: stats.active_rooms, i: '🏠', c: 'var(--green)' },
-                { l: 'Token Tersedia', v: stats.available_teacher_tokens, i: '🎟️', c: 'var(--accent)' },
-                { l: 'Token Terpakai', v: stats.used_teacher_tokens, i: '✅', c: 'var(--purple)' },
+                { l: 'Total Pemain', v: stats.total_players, i: <i className="fa-solid fa-users"></i>, c: 'var(--blue)' },
+                { l: 'Room Aktif', v: stats.active_rooms, i: <i className="fa-solid fa-house-user"></i>, c: 'var(--green)' },
+                { l: 'Token Tersedia', v: stats.available_teacher_tokens, i: <i className="fa-solid fa-ticket"></i>, c: 'var(--accent)' },
+                { l: 'Token Terpakai', v: stats.used_teacher_tokens, i: <i className="fa-solid fa-check-circle"></i>, c: 'var(--purple)' },
               ].map(s => (
                 <div key={s.l} className="stat-card">
                   <span className="stat-icon">{s.i}</span>
@@ -209,7 +209,7 @@ export default function AdminPage() {
           )}
 
           <div className="card" style={{ maxWidth: 480, marginBottom: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>🎟️ Buat Token Guru</h3>
+            <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-ticket" style={{ marginRight: 8 }}></i> Buat Token Guru</h3>
             <div className="input-group">
               <label className="input-label">Label (opsional)</label>
               <input className="input" placeholder='Contoh: "Token untuk Bu Sari"' value={label} onChange={e => setLabel(e.target.value)} />
@@ -219,7 +219,7 @@ export default function AdminPage() {
               <input className="input" type="number" min={1} max={365} value={expiry} onChange={e => setExpiry(parseInt(e.target.value) || 30)} />
             </div>
             <button className="btn btn-primary btn-full" onClick={handleCreateToken} disabled={loading}>
-              {loading ? <span className="spinner" /> : '✨ Buat Token'}
+              {loading ? <span className="spinner" /> : <><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: 8 }}></i> Buat Token</>}
             </button>
           </div>
 
@@ -259,7 +259,7 @@ export default function AdminPage() {
       {/* --- CONFIG TAB --- */}
       {activeTab === 'config' && config && (
         <div className="tab-content animate-fade-in card" style={{ maxWidth: 600 }}>
-          <h3 style={{ marginBottom: 24 }}>🎛️ Feature Toggles</h3>
+          <h3 style={{ marginBottom: 24 }}><i className="fa-solid fa-sliders" style={{ marginRight: 8 }}></i> Feature Toggles</h3>
           <div className="config-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' }}>
             <div>
               <h4 style={{ marginBottom: 4 }}>Maintenance Mode</h4>
@@ -313,7 +313,7 @@ export default function AdminPage() {
         <div className="tab-content animate-fade-in">
           {editingUser ? (
             <div className="card" style={{ maxWidth: 480 }}>
-              <h3 style={{ marginBottom: 16 }}>✏️ Edit Pemain</h3>
+              <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-pen" style={{ marginRight: 8 }}></i> Edit Pemain</h3>
               <div className="input-group">
                 <label className="input-label">Display Name</label>
                 <input className="input" value={editingUser.display_name} onChange={e => setEditingUser({...editingUser, display_name: e.target.value})} />
@@ -410,7 +410,7 @@ export default function AdminPage() {
         <div className="tab-content animate-fade-in">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h2>Daftar Room Aktif/Selesai</h2>
-            <button className="btn btn-secondary btn-sm" onClick={loadRooms}>🔄 Refresh</button>
+            <button className="btn btn-secondary btn-sm" onClick={loadRooms}><i className="fa-solid fa-rotate-right" style={{ marginRight: 8 }}></i> Refresh</button>
           </div>
           
           <input className="input" placeholder="Cari Kode Room atau UID Host..." 
@@ -449,7 +449,7 @@ export default function AdminPage() {
                     {new Date(r.created_at).toLocaleString('id-ID')}
                   </td>
                   <td>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteRoom(r.room_id)}>Hapus Paksa</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteRoom(r.room_id)}><i className="fa-solid fa-trash" style={{ marginRight: 8 }}></i> Hapus Paksa</button>
                   </td>
                 </tr>
               ))}

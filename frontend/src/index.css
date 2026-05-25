@@ -188,16 +188,21 @@ a:hover { color: var(--text); }
 
 /* --- Card Styles --- */
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(22, 33, 62, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 45, 94, 0.5);
   border-radius: var(--radius-lg);
   padding: 24px;
-  transition: all var(--transition);
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .card:hover {
-  border-color: var(--border-hover);
-  background: var(--card-hover);
+  border-color: rgba(61, 61, 126, 0.8);
+  background: rgba(28, 42, 74, 0.85);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .card-interactive {
@@ -231,6 +236,12 @@ a:hover { color: var(--text); }
   text-decoration: none;
   line-height: 1;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.96) !important;
 }
 
 .btn:disabled {
@@ -246,8 +257,8 @@ a:hover { color: var(--text); }
   letter-spacing: 1px;
 }
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-accent), 0 0 15px rgba(247, 201, 72, 0.4);
 }
 
 .btn-secondary {
@@ -374,6 +385,51 @@ a:hover { color: var(--text); }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
+}
+
+/* --- Admin Table Styles (Fixed for HTML Table Elements) --- */
+table.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba(22, 33, 62, 0.6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+table.admin-table thead {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+table.admin-table th {
+  padding: 16px;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+table.admin-table td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(45, 45, 94, 0.3);
+  vertical-align: middle;
+}
+
+table.admin-table tbody tr {
+  transition: background var(--transition-fast);
+}
+
+table.admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+table.admin-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* --- Animations --- */

@@ -65,9 +65,9 @@ export default function HomePage() {
         </div>
         <div className="hero-stats">
           {[
-            { label: 'Rank Point', value: formatRP(user?.current_rank_point || 1200), color: tier.color, icon: '🏅' },
-            { label: 'Total Match', value: user?.total_matches || 0, color: 'var(--blue)', icon: '⚔️' },
-            { label: 'Streak', value: `${user?.learning_streak_days || 0} hari`, color: 'var(--orange)', icon: '🔥' },
+            { label: 'Rank Point', value: formatRP(user?.current_rank_point || 1200), color: tier.color, icon: <i className="fa-solid fa-medal"></i> },
+            { label: 'Total Match', value: user?.total_matches || 0, color: 'var(--blue)', icon: <i className="fa-solid fa-bolt"></i> },
+            { label: 'Streak', value: `${user?.learning_streak_days || 0} hari`, color: 'var(--orange)', icon: <i className="fa-solid fa-fire"></i> },
           ].map(s => (
             <div key={s.label} className="stat-card">
               <span className="stat-icon">{s.icon}</span>
@@ -84,18 +84,18 @@ export default function HomePage() {
         <div className="grid-2">
           {sysConfig.matchmaking_enabled && (
             <div className="action-card" onClick={() => { setShowDuel(!showDuel); setShowSolo(false); }} id="btn-duel">
-              <span className="action-icon">⚔️</span>
+              <span className="action-icon"><i className="fa-solid fa-khanda"></i></span>
               <h3>Duel (Matchmaking)</h3>
               <p className="text-muted">Cari lawan otomatis</p>
             </div>
           )}
           <div className="action-card" onClick={() => { setShowSolo(!showSolo); setShowDuel(false); }} id="btn-solo">
-            <span className="action-icon">🎮</span>
+            <span className="action-icon"><i className="fa-solid fa-gamepad"></i></span>
             <h3>Latihan Solo</h3>
             <p className="text-muted">Latihan mandiri tanpa lawan</p>
           </div>
           <div className="action-card" onClick={() => navigate('/room/create')} id="btn-create-room">
-            <span className="action-icon">🏠</span>
+            <span className="action-icon"><i className="fa-solid fa-house"></i></span>
             <h3>Buat Room</h3>
             <p className="text-muted">Tantang teman dengan taruhan RP</p>
           </div>
@@ -130,7 +130,9 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <button className="btn btn-primary btn-full" onClick={startSolo} id="btn-start-solo">🚀 Mulai Latihan</button>
+            <button className="btn btn-primary btn-full" onClick={startSolo} id="btn-start-solo">
+              <i className="fa-solid fa-rocket" style={{ marginRight: 8 }}></i> Mulai Latihan
+            </button>
           </div>
         )}
 
@@ -170,7 +172,7 @@ export default function HomePage() {
               <p className="text-muted" style={{ marginBottom: 20 }}>Mode Duel saat ini menggunakan konfigurasi default server.</p>
             )}
             <button className="btn btn-primary btn-full" onClick={startDuel} disabled={loadingDuel} id="btn-start-duel">
-              {loadingDuel ? 'Mencari...' : '⚔️ Cari Lawan Sekarang'}
+              {loadingDuel ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <><i className="fa-solid fa-khanda" style={{ marginRight: 8 }}></i> Cari Lawan Sekarang</>}
             </button>
           </div>
         )}

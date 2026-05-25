@@ -75,15 +75,10 @@ app = FastAPI(
 
 cors_origins_raw = os.getenv(
     "CORS_ORIGINS", 
-    "https://mathsprint-frontend-447876034135.asia-southeast2.run.app,http://localhost:5173,http://localhost:3000"
+    "https://mathsprint-frontend-447876034135.asia-southeast2.run.app,https://mathsprint-447876034135.asia-southeast2.run.app,http://localhost:5173,http://localhost:3000"
 )
 # Bersihkan trailing slash (/) karena CORS mencocokkan string secara eksak
 cors_origins = [origin.strip().rstrip("/") for origin in cors_origins_raw.split(",") if origin.strip()]
-
-# Paksa masukkan URL frontend ini agar kebal dari salah ketik env var di Cloud Run
-force_url = "https://mathsprint-frontend-447876034135.asia-southeast2.run.app"
-if force_url not in cors_origins:
-    cors_origins.append(force_url)
 
 app.add_middleware(
     CORSMiddleware,
