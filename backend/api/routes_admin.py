@@ -261,3 +261,37 @@ async def delete_room_endpoint(
     if not success:
         raise HTTPException(status_code=404, detail="Room tidak ditemukan")
     return {"message": "Room berhasil dihapus"}
+
+@router.get("/teachers", summary="List all teachers and their students")
+async def list_teachers_endpoint(
+    token: dict = Depends(require_developer)
+):
+    from services.firebase_client import get_firestore_client
+    db = get_firestore_client()
+    
+    teachers = list(db.collection("players").where("account_type", "==", "teacher").stream())
+    students = list(db.collection("players").where("account_type", "==", "user").stream())
+    
+    student_map = {}
+    for doc in students:
+        s = doc.to_dict()
+        codes = s.get("linked_teacher_codes", [])
+        for c in codes:
+            if c not in student_map:
+                student_map[c] = []
+            student_map[c].append(s)
+
+    teacher_list = []
+    for doc in teachers:
+        t = doc.to_dict()
+        code = t.get("my_teacher_code")
+        t_students = student_map.get(code, []) if code else []
+        teacher_list.append({
+            "uid": t.get("uid"),
+            "display_name": t.get("display_name"),
+            "my_teacher_code": code,
+            "student_count": len(t_students),
+            "students": [{"uid": s.get("uid"), "display_name": s.get("display_name")} for s in t_students]
+        })
+        
+    return {"teachers": teacher_list}

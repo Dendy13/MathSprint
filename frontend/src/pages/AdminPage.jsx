@@ -30,6 +30,10 @@ export default function AdminPage() {
   const [roomsList, setRoomsList] = useState([]);
   const [roomSearch, setRoomSearch] = useState('');
 
+  // Teachers Tab State
+  const [teachersList, setTeachersList] = useState([]);
+  const [teacherSearch, setTeacherSearch] = useState('');
+
   useEffect(() => { 
     if (user?.account_type === 'developer') {
       loadDashboardData();
@@ -40,6 +44,7 @@ export default function AdminPage() {
     if (activeTab === 'config' && !config) loadConfig();
     if (activeTab === 'users' && users.length === 0) loadUsers();
     if (activeTab === 'rooms' && roomsList.length === 0) loadRooms();
+    if (activeTab === 'teachers' && teachersList.length === 0) loadTeachers();
   }, [activeTab]);
 
   const showMsg = (text) => {
@@ -73,6 +78,14 @@ export default function AdminPage() {
     try {
       const res = await listRooms(100);
       setRoomsList(res.rooms || []);
+    } catch (e) { showMsg(e.message); }
+  };
+
+  const loadTeachers = async () => {
+    try {
+      const { listTeachers } = await import('../api/admin.js');
+      const res = await listTeachers();
+      setTeachersList(res.teachers || []);
     } catch (e) { showMsg(e.message); }
   };
 
@@ -174,6 +187,11 @@ export default function AdminPage() {
     (r.host_uid && r.host_uid.includes(roomSearch))
   );
 
+  const filteredTeachers = teachersList.filter(t => 
+    t.display_name.toLowerCase().includes(teacherSearch.toLowerCase()) || 
+    (t.my_teacher_code && t.my_teacher_code.toLowerCase().includes(teacherSearch.toLowerCase()))
+  );
+
   return (
     <div className="page">
       <h1 style={{ marginBottom: 8 }}><i className="fa-solid fa-gear" style={{ marginRight: 8 }}></i> Admin Panel</h1>
@@ -181,11 +199,12 @@ export default function AdminPage() {
 
       {msg && <div className="toast animate-fade-in" style={{ marginBottom: 16, display: 'inline-block' }}>{msg}</div>}
 
-      <div className="tabs" style={{ marginBottom: 24, display: 'flex', gap: 8, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+      <div className="tabs" style={{ marginBottom: 24, display: 'flex', gap: 8, borderBottom: '1px solid var(--border)', paddingBottom: 8, overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <button className={`btn btn-sm ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('dashboard')}>Statistik & Token</button>
-        <button className={`btn btn-sm ${activeTab === 'config' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('config')}>Sistem Konfigurasi</button>
+        <button className={`btn btn-sm ${activeTab === 'teachers' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('teachers')}>Data Guru</button>
         <button className={`btn btn-sm ${activeTab === 'users' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('users')}>Manajemen Akun</button>
         <button className={`btn btn-sm ${activeTab === 'rooms' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('rooms')}>Manajemen Room</button>
+        <button className={`btn btn-sm ${activeTab === 'config' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('config')}>Sistem Konfigurasi</button>
       </div>
 
       {/* --- DASHBOARD TAB --- */}
@@ -249,6 +268,38 @@ export default function AdminPage() {
                     {!t.is_used && !t.is_revoked && (
                       <button className="btn btn-danger btn-sm" onClick={() => handleRevokeToken(t.token_id)}>Cabut</button>
                     )}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* --- TEACHERS TAB --- */}
+      {activeTab === 'teachers' && (
+        <div className="tab-content animate-fade-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3>Data Guru & Murid</h3>
+            <div>
+              <button className="btn btn-sm btn-ghost" onClick={loadTeachers} style={{ marginRight: 8 }}><i className="fa-solid fa-rotate-right"></i> Refresh</button>
+              <input className="input" style={{ width: 250 }} placeholder="Cari nama atau kode guru..." value={teacherSearch} onChange={e => setTeacherSearch(e.target.value)} />
+            </div>
+          </div>
+          
+          <div className="admin-table">
+            <div className="admin-header" style={{ gridTemplateColumns: '1fr 1fr 1fr 2fr' }}>
+              <span>Nama Guru</span><span>Kode Guru</span><span>Jml Murid</span><span>Daftar Murid</span>
+            </div>
+            {filteredTeachers?.length === 0 ? <div className="text-center text-muted" style={{ padding: 20 }}>Tidak ada data guru.</div> : 
+              filteredTeachers?.map(t => (
+                <div key={t.uid} className="admin-row" style={{ gridTemplateColumns: '1fr 1fr 1fr 2fr' }}>
+                  <span style={{ fontWeight: 600 }}>{t.display_name}</span>
+                  <span className="text-accent">{t.my_teacher_code || '—'}</span>
+                  <span>{t.student_count} murid</span>
+                  <span className="text-muted" style={{ fontSize: '0.8rem', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {t.students?.length > 0 ? t.students.map(s => (
+                      <span key={s.uid} className="badge badge-accent" style={{ background: 'rgba(56, 189, 248, 0.1)', color: 'var(--accent)' }}>{s.display_name}</span>
+                    )) : '—'}
                   </span>
                 </div>
               ))}

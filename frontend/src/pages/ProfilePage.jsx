@@ -8,6 +8,7 @@ export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState('stats');
   
   // Edit display name state
   const [isEditing, setIsEditing] = useState(false);
@@ -220,11 +221,16 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <h3 className="text-center" style={{ marginBottom: '24px', color: 'var(--muted)' }}>
-        STATISTIK PERTANDINGAN
-      </h3>
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
+        <button className={`btn btn-ghost ${activeTab === 'stats' ? 'text-accent' : ''}`} onClick={() => setActiveTab('stats')} style={{ borderBottom: activeTab === 'stats' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>📊 Statistik</button>
+        {user?.account_type === 'teacher' && <button className={`btn btn-ghost ${activeTab === 'teacher' ? 'text-accent' : ''}`} onClick={() => setActiveTab('teacher')} style={{ borderBottom: activeTab === 'teacher' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>👨‍🏫 Dasbor Guru</button>}
+        {user?.account_type === 'user' && <button className={`btn btn-ghost ${activeTab === 'teacher' ? 'text-accent' : ''}`} onClick={() => setActiveTab('teacher')} style={{ borderBottom: activeTab === 'teacher' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>🏫 Kelas & Guru</button>}
+        <button className={`btn btn-ghost ${activeTab === 'settings' ? 'text-accent' : ''}`} onClick={() => setActiveTab('settings')} style={{ borderBottom: activeTab === 'settings' ? '2px solid var(--accent)' : 'none', borderRadius: 0 }}>⚙️ Pengaturan</button>
+      </div>
 
-      {loading ? (
+      {activeTab === 'stats' && (
+        <>
+          {loading ? (
         <div className="page-centered"><div className="spinner" /></div>
       ) : (
         <div className="stats-grid">
@@ -251,10 +257,13 @@ export default function ProfilePage() {
             <div className="stat-sub">Belajar berturut-turut</div>
           </div>
         </div>
+          )}
+        </>
       )}
 
       {/* Teacher Section */}
-      <div style={{ marginTop: 40 }}>
+      {activeTab === 'teacher' && (
+        <div style={{ marginTop: 16 }}>
         {user?.account_type === 'teacher' && stats.my_teacher_code && (
           <div className="card" style={{ padding: 24, marginBottom: 24 }}>
             <h3 style={{ marginBottom: 16 }}><i className="fa-solid fa-chalkboard-user" style={{ marginRight: 8 }}></i> Dasbor Guru</h3>
@@ -335,16 +344,25 @@ export default function ProfilePage() {
               </div>
               {teacherCodeError && <p className="error-text" style={{ marginTop: 8 }}>{teacherCodeError}</p>}
               {teacherCodeSuccess && <p className="success-text" style={{ marginTop: 8, color: 'var(--green)' }}>{teacherCodeSuccess}</p>}
-            </div>
           </div>
         )}
       </div>
+      )}
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
-        <button className="btn btn-ghost" onClick={() => setIsChangingPassword(true)}>
-          🔒 Ubah Kata Sandi
-        </button>
-      </div>
+      {activeTab === 'settings' && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <button className="btn btn-secondary" onClick={() => setIsChangingPassword(true)} style={{ width: 250 }}>
+            🔒 Ubah Kata Sandi
+          </button>
+          <button className="btn btn-ghost" onClick={() => {
+            const { logout } = require('../context/AuthContext.jsx'); // fallback
+            // We use the logout from useAuth instead
+            document.getElementById('btn-logout')?.click();
+          }} style={{ width: 250, color: 'var(--red)' }}>
+            <i className="fa-solid fa-right-from-bracket" style={{ marginRight: 8 }}></i> Keluar Akun
+          </button>
+        </div>
+      )}
 
       {/* Edit Name Modal */}
       {isEditing && (

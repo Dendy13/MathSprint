@@ -45,6 +45,7 @@
 }
 .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.04); }
 .nav-link.active { color: var(--accent); background: var(--accent-dim); }
+.nav-link.mobile-only { display: none; }
 .navbar-user {
   display: flex;
   align-items: center;
@@ -92,5 +93,6 @@
     align-items: center;
     gap: 4px;
   }
+  .nav-link.mobile-only { display: flex; }
   .user-info { display: none; }
 }

@@ -14,6 +14,7 @@ export default function Navbar() {
     { to: '/', label: '🏠 Beranda', id: 'nav-home' },
     { to: '/leaderboard', label: '🏆 Peringkat', id: 'nav-leaderboard' },
     { to: '/friends', label: '👥 Teman', id: 'nav-friends' },
+    { to: '/profile', label: '👤 Profil', id: 'nav-profile', mobileOnly: true },
   ];
   if (user.account_type === 'developer') {
     navLinks.push({ to: '/admin', label: '⚙️ Admin', id: 'nav-admin' });
@@ -29,7 +30,7 @@ export default function Navbar() {
         <div className="navbar-links">
           {navLinks.map(l => (
             <Link key={l.id} to={l.to} id={l.id}
-              className={`nav-link ${location.pathname === l.to ? 'active' : ''}`}>
+              className={`nav-link ${location.pathname === l.to ? 'active' : ''} ${l.mobileOnly ? 'mobile-only' : ''}`}>
               {l.label}
             </Link>
           ))}

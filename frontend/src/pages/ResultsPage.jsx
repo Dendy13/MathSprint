@@ -47,7 +47,8 @@ export default function ResultsPage() {
   // Check for Rank Up
   useEffect(() => {
     if (multiResult && user) {
-      const myCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.winner_calculation : multiResult.loser_calculation;
+      const myCalc = multiResult?.winner_calculation?.player_uid === user?.uid ? multiResult?.winner_calculation : multiResult?.loser_calculation;
+      if (!myCalc) return;
       const oldTier = getRankTier(myCalc.old_rp);
       const newTier = getRankTier(myCalc.new_rp);
       
@@ -131,8 +132,10 @@ export default function ResultsPage() {
     
     // Quick fix: if we are loser but draw, myCalc might be wrong if winner_calculation was assigned to us arbitrarily. 
     // Let's explicitly match uid:
-    const actualMyCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.winner_calculation : multiResult.loser_calculation;
-    const actualOppCalc = multiResult.winner_calculation.player_uid === user?.uid ? multiResult.loser_calculation : multiResult.winner_calculation;
+    const actualMyCalc = multiResult?.winner_calculation?.player_uid === user?.uid ? multiResult?.winner_calculation : multiResult?.loser_calculation;
+    const actualOppCalc = multiResult?.winner_calculation?.player_uid === user?.uid ? multiResult?.loser_calculation : multiResult?.winner_calculation;
+
+    if (!actualMyCalc || !actualOppCalc) return null; // Defensive check
 
     return (
       <div className="page page-centered" style={{ position: 'relative' }}>
@@ -159,16 +162,16 @@ export default function ResultsPage() {
             {isDraw ? 'SERI! 🤝' : isWinner ? 'MENANG! 🎉' : 'KALAH! 💔'}
           </h1>
           
-          <p className="text-muted">{OP_LABELS[multiResult.op]} • {DIFF_LABELS[multiResult.diff]}</p>
+          <p className="text-muted">{OP_LABELS[multiResult?.op] || 'Multiplayer'} • {DIFF_LABELS[multiResult?.diff] || 'Match'}</p>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--surface)', padding: 16, borderRadius: 'var(--radius)', marginTop: 24 }}>
             <div style={{ textAlign: 'left' }}>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>SKOR KAMU</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{actualMyCalc.display_name}</div>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>PEMAIN</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: isWinner ? 'var(--green)' : 'inherit' }}>{actualMyCalc.display_name}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>SKOR LAWAN</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{actualOppCalc.display_name}</div>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>LAWAN</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: !isWinner && !isDraw ? 'var(--green)' : 'inherit' }}>{actualOppCalc.display_name}</div>
             </div>
           </div>
 
