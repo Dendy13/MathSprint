@@ -406,11 +406,13 @@ export default function GamePage() {
       </div>
 
       {/* Progress dots */}
-      <div className="progress-dots">
-        {questions.map((_, i) => (
-          <div key={i} className={`dot ${i < currentIdx ? (answers[i] === questions[i]?.answer ? 'correct' : 'wrong') : i === currentIdx ? 'current' : ''}`} />
-        ))}
-      </div>
+      {mode !== 'solo' && (
+        <div className="progress-dots">
+          {questions.map((_, i) => (
+            <div key={i} className={`dot ${i < currentIdx ? (answers[i] === questions[i]?.answer ? 'correct' : 'wrong') : i === currentIdx ? 'current' : ''}`} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
