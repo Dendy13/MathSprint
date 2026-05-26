@@ -6,3 +6,8 @@
 .friend-name { font-weight: 700; font-size: 0.95rem; }
 .friend-rp { font-size: 0.8rem; font-weight: 600; }
 .friend-actions { display: flex; gap: 8px; }
+
+/* Invite Card */
+.invite-card { border-left: 4px solid var(--accent); }
+.invite-card .friend-actions { flex-direction: column; align-items: stretch; }
+.invite-card .friend-actions .btn { width: 100%; }

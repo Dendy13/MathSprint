@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getFriendList, getPendingRequests, sendFriendRequest, respondFriendRequest, removeFriend } from '../api/friend.js';
+import { useNavigate } from 'react-router-dom';
+import { getFriendList, getPendingRequests, sendFriendRequest, respondFriendRequest, removeFriend, getRoomInvites, deleteRoomInvite, inviteFriendToRoom } from '../api/friend.js';
+import { createRoom } from '../api/game.js';
 import { formatRP, getRankTier } from '../utils/helpers.js';
 import './FriendsPage.css';
 
@@ -7,6 +9,7 @@ export default function FriendsPage() {
   const [tab, setTab] = useState('list');
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [invites, setInvites] = useState([]);
   const [searchUid, setSearchUid] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -16,9 +19,10 @@ export default function FriendsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [fl, rq] = await Promise.all([getFriendList(), getPendingRequests()]);
+      const [fl, rq, inv] = await Promise.all([getFriendList(), getPendingRequests(), getRoomInvites()]);
       setFriends(fl.friends || []);
       setRequests(rq || []);
+      setInvites(inv || []);
     } catch { }
     setLoading(false);
   };
@@ -44,13 +48,48 @@ export default function FriendsPage() {
     try { await removeFriend(uid); loadData(); } catch (e) { setMsg(e.message); }
   };
 
+  const navigate = useNavigate();
+
+  const handleDuel = async (friendUid) => {
+    setLoading(true);
+    try {
+      // 1. Create Room (default config for duel)
+      const room = await createRoom({
+        config: { op: 'add', diff: 'medium', question_limit: 10, elo_wager: 10, time_limit_seconds: 60 }
+      });
+      // 2. Send Invite
+      await inviteFriendToRoom({ to_uid: friendUid, room_id: room.room_id });
+      // 3. Navigate
+      navigate(`/room/${room.room_id}`);
+    } catch (e) {
+      setMsg(e.message);
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptDuel = async (roomId) => {
+    setLoading(true);
+    try {
+      await deleteRoomInvite(roomId);
+      navigate(`/room/${roomId}`);
+    } catch (e) {
+      setMsg(e.message);
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="page">
       <h1 style={{ marginBottom: 8 }}>👥 Teman</h1>
       <p className="text-muted" style={{ marginBottom: 24 }}>Kelola daftar teman dan undangan</p>
 
       <div className="friends-tabs">
-        {[['list', `🤝 Teman (${friends.length})`], ['requests', `📨 Permintaan (${requests.length})`], ['add', '➕ Tambah']].map(([k, l]) => (
+        {[
+          ['list', `🤝 Teman (${friends.length})`], 
+          ['invites', `⚔️ Duel (${invites.length})`], 
+          ['requests', `📨 Permintaan (${requests.length})`], 
+          ['add', '➕ Tambah']
+        ].map(([k, l]) => (
           <button key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -73,11 +112,34 @@ export default function FriendsPage() {
                   </div>
                 </div>
                 <div className="friend-actions">
+                  <button className="btn btn-primary btn-sm" onClick={() => handleDuel(f.uid)}>⚔️ Duel</button>
                   <button className="btn btn-danger btn-sm" onClick={() => handleRemove(f.uid)}>Hapus</button>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'invites' && (
+        <div className="friends-grid">
+          {invites.length === 0 ? (
+            <div className="empty-state"><span style={{ fontSize: 40 }}>⚔️</span><h3>Tidak ada undangan duel</h3></div>
+          ) : invites.map(inv => (
+            <div key={inv.room_id} className="friend-card card invite-card">
+              <div className="friend-info">
+                <span className="friend-tier" style={{ fontSize: '1.5rem' }}>⚔️</span>
+                <div>
+                  <div className="friend-name">{inv.from_display_name}</div>
+                  <div className="text-muted" style={{ fontSize: '0.8rem' }}>Mengajakmu duel!</div>
+                </div>
+              </div>
+              <div className="friend-actions">
+                <button className="btn btn-accent btn-sm" onClick={() => handleAcceptDuel(inv.room_id)}>Terima & Masuk</button>
+                <button className="btn btn-ghost btn-sm" onClick={async () => { await deleteRoomInvite(inv.room_id); loadData(); }}>Abaikan</button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

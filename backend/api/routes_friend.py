@@ -30,8 +30,9 @@ from services.auth_service import get_current_uid
 
 router = APIRouter(prefix="/friend", tags=["Friends"])
 
-# In-memory friend request store
+# In-memory stores
 _friend_requests: dict[str, FriendRequest] = {}
+_room_invites: list[RoomInvite] = []
 
 
 @router.post(
@@ -260,13 +261,62 @@ async def invite_friend_to_room(
             detail=f"Room '{invite.room_id}' tidak ditemukan.",
         )
 
-    return RoomInvite(
+    invite_obj = RoomInvite(
         from_uid=uid,
         from_display_name=player.display_name,
         to_uid=invite.to_uid,
         room_id=invite.room_id.upper(),
         created_at=datetime.utcnow(),
     )
+    
+    # Remove existing invite for this room from this user to this friend if exists
+    global _room_invites
+    _room_invites = [inv for inv in _room_invites if not (inv.from_uid == uid and inv.to_uid == invite.to_uid and inv.room_id == invite.room_id.upper())]
+    _room_invites.append(invite_obj)
+
+    return invite_obj
+
+@router.get(
+    "/invites",
+    response_model=list[RoomInvite],
+    summary="Undangan room masuk",
+    description="Daftar undangan duel/room dari teman.",
+)
+async def get_room_invites(
+    uid: str = Depends(get_current_uid),
+):
+    """Ambil semua undangan room yang ditujukan kepada user."""
+    # Filter and only return invites for rooms that are still waiting
+    from core.room_engine import get_room
+    from models.room import RoomStatus
+    
+    valid_invites = []
+    global _room_invites
+    
+    for inv in _room_invites:
+        if inv.to_uid == uid:
+            room = get_room(inv.room_id)
+            if room and room.status == RoomStatus.WAITING:
+                valid_invites.append(inv)
+                
+    # Clean up old invalid invites globally (optional, but good for memory)
+    _room_invites = [inv for inv in _room_invites if get_room(inv.room_id) is not None and get_room(inv.room_id).status == RoomStatus.WAITING]
+    
+    return valid_invites
+
+@router.delete(
+    "/invite/{room_id}",
+    summary="Hapus undangan room",
+    description="Hapus undangan setelah diterima atau ditolak.",
+)
+async def delete_room_invite(
+    room_id: str,
+    uid: str = Depends(get_current_uid),
+):
+    """Hapus undangan duel dari memory."""
+    global _room_invites
+    _room_invites = [inv for inv in _room_invites if not (inv.to_uid == uid and inv.room_id == room_id.upper())]
+    return {"message": "Undangan dihapus"}
 
 
 @router.get(
