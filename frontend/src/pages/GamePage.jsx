@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useTimer } from '../hooks/useTimer.js';
 import { getQuestion, getRoomQuestions, getRoomInfo, submitAnswer as apiSubmitAnswer } from '../api/game.js';
 import { OP_SYMBOLS, OP_COLORS, OP_LABELS, DIFF_LABELS } from '../utils/constants.js';
+import { db } from '../config/firebase.js';
+import { doc, onSnapshot } from 'firebase/firestore';
 import './GamePage.css';
 
 export default function GamePage() {
@@ -73,48 +75,45 @@ export default function GamePage() {
     loadQuestions();
   }, [op, diff, mode, roomId, user]);
 
-  // Polling Opponent in Multiplayer
+  // Realtime Opponent in Multiplayer
   useEffect(() => {
     if (mode !== 'multi' || !roomId) return;
     if (phase !== 'playing' && phase !== 'finished') return;
 
-    let timeoutId;
     let isMounted = true;
 
-    const pollRoomState = async () => {
-      try {
-        const room = await getRoomInfo(roomId);
-        if (!isMounted) return;
-        setRoomData(room);
+    const unsubscribe = onSnapshot(doc(db, 'rooms', roomId), (snapshot) => {
+      if (!isMounted) return;
+      if (!snapshot.exists()) return;
 
-        if (!isSpectator) {
-          // Find opponent
-          const players = Object.values(room.players || {});
-          const opp = players.find(p => p.uid !== user?.uid);
-          if (opp) setOpponent(opp);
+      const room = snapshot.data();
+      setRoomData(room);
 
-          // Check if room is finished (meaning both finished)
-          if (room.status === 'finished' && phase === 'finished') {
-             navigate(`/results?mode=multi&roomId=${roomId}`);
-          } else {
-             timeoutId = setTimeout(pollRoomState, 2000);
-          }
-        } else {
-          // If Spectator, keep polling until room is finished, then wait a bit
-          if (room.status === 'finished') {
-             setTimeout(() => navigate(`/room/${roomId}`), 5000); // Back to waiting room or somewhere
-          } else {
-             timeoutId = setTimeout(pollRoomState, 2000);
-          }
+      if (!isSpectator) {
+        // Find opponent
+        const players = Object.values(room.players || {});
+        const opp = players.find(p => p.uid !== user?.uid);
+        if (opp) setOpponent(opp);
+
+        // Check if room is finished (meaning both finished)
+        if (room.status === 'finished' && phase === 'finished') {
+           navigate(`/results?mode=multi&roomId=${roomId}`);
         }
-      } catch (e) {
-        if (isMounted) timeoutId = setTimeout(pollRoomState, 3000);
+      } else {
+        // If Spectator, check if room is finished, then wait a bit
+        if (room.status === 'finished') {
+           setTimeout(() => { if(isMounted) navigate(`/room/${roomId}`) }, 5000); // Back to waiting room or somewhere
+        }
       }
-    };
-    pollRoomState();
+    }, (error) => {
+      console.error("Realtime room error:", error);
+    });
 
-    return () => { isMounted = false; clearTimeout(timeoutId); };
-  }, [mode, roomId, phase, navigate, user, isSpectator]);
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [mode, roomId, phase, isSpectator, navigate, user]);
 
   // Countdown
   useEffect(() => {

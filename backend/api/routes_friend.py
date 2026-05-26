@@ -32,7 +32,6 @@ router = APIRouter(prefix="/friend", tags=["Friends"])
 
 # In-memory stores
 _friend_requests: dict[str, FriendRequest] = {}
-_room_invites: list[RoomInvite] = []
 
 
 @router.post(
@@ -261,6 +260,14 @@ async def invite_friend_to_room(
             detail=f"Room '{invite.room_id}' tidak ditemukan.",
         )
 
+    from services.firebase_client import get_firestore_client
+    db = get_firestore_client()
+    
+    # Remove existing invites for this room from this user to this friend
+    docs = db.collection("room_invites").where("from_uid", "==", uid).where("to_uid", "==", invite.to_uid).where("room_id", "==", invite.room_id.upper()).stream()
+    for doc in docs:
+        doc.reference.delete()
+
     invite_obj = RoomInvite(
         from_uid=uid,
         from_display_name=player.display_name,
@@ -269,10 +276,12 @@ async def invite_friend_to_room(
         created_at=datetime.utcnow(),
     )
     
-    # Remove existing invite for this room from this user to this friend if exists
-    global _room_invites
-    _room_invites = [inv for inv in _room_invites if not (inv.from_uid == uid and inv.to_uid == invite.to_uid and inv.room_id == invite.room_id.upper())]
-    _room_invites.append(invite_obj)
+    # Save to firestore
+    # We use a composite ID or auto ID. Auto ID is fine.
+    doc_ref = db.collection("room_invites").document()
+    db_data = invite_obj.model_dump(mode='json')
+    # add the firestore document ID if needed, but not required for frontend since it will map it or just use room_id
+    doc_ref.set(db_data)
 
     return invite_obj
 
@@ -289,19 +298,22 @@ async def get_room_invites(
     # Filter and only return invites for rooms that are still waiting
     from core.room_engine import get_room
     from models.room import RoomStatus
+    from services.firebase_client import get_firestore_client
+    
+    db = get_firestore_client()
+    docs = db.collection("room_invites").where("to_uid", "==", uid).stream()
     
     valid_invites = []
-    global _room_invites
     
-    for inv in _room_invites:
-        if inv.to_uid == uid:
-            room = get_room(inv.room_id)
-            if room and room.status == RoomStatus.WAITING:
-                valid_invites.append(inv)
-                
-    # Clean up old invalid invites globally (optional, but good for memory)
-    _room_invites = [inv for inv in _room_invites if get_room(inv.room_id) is not None and get_room(inv.room_id).status == RoomStatus.WAITING]
-    
+    for doc in docs:
+        inv_data = doc.to_dict()
+        room = get_room(inv_data.get("room_id"))
+        if room and room.status == RoomStatus.WAITING:
+            valid_invites.append(RoomInvite(**inv_data))
+        else:
+            # Clean up invalid invite
+            doc.reference.delete()
+            
     return valid_invites
 
 @router.delete(
@@ -314,8 +326,11 @@ async def delete_room_invite(
     uid: str = Depends(get_current_uid),
 ):
     """Hapus undangan duel dari memory."""
-    global _room_invites
-    _room_invites = [inv for inv in _room_invites if not (inv.to_uid == uid and inv.room_id == room_id.upper())]
+    from services.firebase_client import get_firestore_client
+    db = get_firestore_client()
+    docs = db.collection("room_invites").where("to_uid", "==", uid).where("room_id", "==", room_id.upper()).stream()
+    for doc in docs:
+        doc.reference.delete()
     return {"message": "Undangan dihapus"}
 
 

@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getFriendList, getPendingRequests, sendFriendRequest, respondFriendRequest, removeFriend, getRoomInvites, deleteRoomInvite, inviteFriendToRoom } from '../api/friend.js';
+import { getFriendList, getPendingRequests, sendFriendRequest, respondFriendRequest, removeFriend, deleteRoomInvite, inviteFriendToRoom } from '../api/friend.js';
 import { createRoom } from '../api/game.js';
 import { formatRP, getRankTier } from '../utils/helpers.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { db } from '../config/firebase.js';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import './FriendsPage.css';
 
 export default function FriendsPage() {
+  const { user } = useAuth();
   const [tab, setTab] = useState('list');
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -16,13 +20,28 @@ export default function FriendsPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Real-time listener for duel invites
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'room_invites'), where('to_uid', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newInvites = [];
+      snapshot.forEach((doc) => {
+        newInvites.push({ id: doc.id, ...doc.data() });
+      });
+      setInvites(newInvites);
+    }, (error) => {
+      console.error("Error listening to invites:", error);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [fl, rq, inv] = await Promise.all([getFriendList(), getPendingRequests(), getRoomInvites()]);
+      const [fl, rq] = await Promise.all([getFriendList(), getPendingRequests()]);
       setFriends(fl.friends || []);
       setRequests(rq || []);
-      setInvites(inv || []);
     } catch { }
     setLoading(false);
   };

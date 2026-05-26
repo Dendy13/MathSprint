@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getRoomInfo, startGame, leaveRoom } from '../api/game.js';
 import { OP_LABELS, DIFF_LABELS } from '../utils/constants.js';
+import { db } from '../config/firebase.js';
+import { doc, onSnapshot } from 'firebase/firestore';
 import './WaitingRoomPage.css';
 
 export default function WaitingRoomPage() {
@@ -15,76 +17,66 @@ export default function WaitingRoomPage() {
   const [rolePrompt, setRolePrompt] = useState(false);
   const [hasAttemptedJoin, setHasAttemptedJoin] = useState(false);
 
-  // Polling room status
+  // Realtime room status listener
   useEffect(() => {
-    let timeoutId;
+    if (!roomId) return;
     let isMounted = true;
 
-    let hasAttemptedJoin = false;
+    const unsubscribe = onSnapshot(doc(db, 'rooms', roomId), async (snapshot) => {
+      if (!isMounted) return;
+      if (!snapshot.exists()) {
+        setError('Room tidak ditemukan atau sudah dibubarkan.');
+        return;
+      }
 
-    const pollRoom = async () => {
-      try {
-        const data = await getRoomInfo(roomId);
-        if (!isMounted) return;
+      const data = snapshot.data();
 
-        // Auto-join logic for non-host players who aren't in the room yet
-        const isPlayer = data.players && data.players[user?.uid];
-        const isSpectator = data.spectators && data.spectators[user?.uid];
-        
-        if (user && data.host_uid !== user.uid && !isPlayer && !isSpectator && !hasAttemptedJoin) {
-          if (user.account_type === 'teacher') {
-            setRolePrompt(true);
-            setRoom(data);
-            return;
-          }
-          
-          setHasAttemptedJoin(true);
-          try {
-            const { joinRoom } = await import('../api/game.js');
-            const joinedData = await joinRoom(roomId, 'player');
-            if (isMounted) setRoom(joinedData);
-          } catch (joinErr) {
-            if (isMounted) setError(joinErr.response?.data?.detail || joinErr.message || 'Gagal masuk ke room ini.');
-            return;
-          }
-        } else {
+      // Auto-join logic for non-host players who aren't in the room yet
+      const isPlayer = data.players && data.players[user?.uid];
+      const isSpectator = data.spectators && data.spectators[user?.uid];
+      
+      if (user && data.host_uid !== user.uid && !isPlayer && !isSpectator && !hasAttemptedJoin) {
+        if (user.account_type === 'teacher') {
+          setRolePrompt(true);
           setRoom(data);
-        }
-
-        if (data.status === 'playing') {
-          // Game has started! Navigate to GamePage
-          navigate(`/game?mode=multi&roomId=${roomId}`);
           return;
         }
-
-        // Auto start if matchmaking and full
-        if (data.is_matchmaking && Object.keys(data.players || {}).length >= data.max_players && data.host_uid === user?.uid) {
-           try {
-             const { startGame } = await import('../api/game.js');
-             await startGame(roomId);
-           } catch (e) {
-             // Ignore, let next poll handle or show error elsewhere
-           }
+        
+        setHasAttemptedJoin(true);
+        try {
+          const { joinRoom } = await import('../api/game.js');
+          await joinRoom(roomId, 'player');
+          // No need to setRoom manually, snapshot will trigger again automatically
+        } catch (joinErr) {
+          if (isMounted) setError(joinErr.response?.data?.detail || joinErr.message || 'Gagal masuk ke room ini.');
+          return;
         }
-
-        // Poll again in 2 seconds
-        timeoutId = setTimeout(pollRoom, 2000);
-      } catch (err) {
-        if (!isMounted) return;
-        if (err.response?.status === 404) {
-          setError('Room tidak ditemukan atau sudah dibubarkan.');
-        } else {
-          setError('Gagal memuat info room.');
-          timeoutId = setTimeout(pollRoom, 3000);
-        }
+      } else {
+        setRoom(data);
       }
-    };
 
-    pollRoom();
+      if (data.status === 'playing') {
+        // Game has started! Navigate to GamePage
+        navigate(`/game?mode=multi&roomId=${roomId}`);
+        return;
+      }
+
+      // Auto start if matchmaking and full
+      if (data.is_matchmaking && Object.keys(data.players || {}).length >= data.max_players && data.host_uid === user?.uid) {
+         try {
+           const { startGame } = await import('../api/game.js');
+           await startGame(roomId);
+         } catch (e) {
+           // Ignore, let next snapshot handle
+         }
+      }
+    }, (err) => {
+      if (isMounted) setError('Gagal terhubung ke room (realtime error).');
+    });
 
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
+      unsubscribe();
     };
   }, [roomId, navigate, user, hasAttemptedJoin]);
 
