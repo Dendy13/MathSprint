@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getMatchResult } from '../api/game.js';
 import { OP_LABELS, OP_SYMBOLS, DIFF_LABELS } from '../utils/constants.js';
-import { getStarEmoji, getStarMessage } from '../utils/helpers.js';
+import { getStarEmoji, getStarMessage, getRankTier } from '../utils/helpers.js';
 import './ResultsPage.css';
 
 export default function ResultsPage() {
