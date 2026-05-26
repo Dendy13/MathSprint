@@ -166,7 +166,7 @@ export default function GamePage() {
     }
 
     // Submit to backend asynchronously if multiplayer
-    if (mode === 'multi' && roomId && userAns !== null) {
+    if (mode === 'multi' && roomId) {
       apiSubmitAnswer(roomId, { room_id: roomId, question_index: currentIdx, answer: userAns }).catch(() => {});
     }
 
@@ -274,7 +274,7 @@ export default function GamePage() {
           {countdown > 0 ? countdown : 'GO!'}
         </div>
         <p className="text-muted" style={{ marginTop: 16 }}>
-          {mode === 'solo' ? 'Mode Tanpa Batas' : `${questions.length || totalQ} soal`} • {OP_LABELS[op]} ({DIFF_LABELS[diff]}) dalam {timeLimit} detik
+          {mode === 'solo' ? 'Mode Tanpa Batas' : `${questions.length || totalQ} soal`} • {OP_LABELS[roomData?.config?.op || op]} ({DIFF_LABELS[roomData?.config?.diff || diff]}) dalam {roomData?.config?.time_limit_seconds || timeLimit} detik
         </p>
       </div>
     );
@@ -313,7 +313,7 @@ export default function GamePage() {
         </div>
         <div className="topbar-center">
           <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--muted)' }}>
-            {OP_LABELS[op]} • {DIFF_LABELS[diff]}
+            {OP_LABELS[roomData?.config?.op || op]} • {DIFF_LABELS[roomData?.config?.diff || diff]}
           </span>
         </div>
         <div className="topbar-right">
@@ -382,7 +382,7 @@ export default function GamePage() {
         {q && (
           <div className="question-display animate-fade-in" key={currentIdx}>
             <span className="q-num">{q.num1}</span>
-            <span className="q-op" style={{ color: OP_COLORS[op] }}>{OP_SYMBOLS[op]}</span>
+            <span className="q-op" style={{ color: OP_COLORS[roomData?.config?.op || op] }}>{OP_SYMBOLS[roomData?.config?.op || op]}</span>
             <span className="q-num">{q.num2}</span>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getProfile, getSystemConfig } from '../api/auth.js';
@@ -21,6 +21,16 @@ export default function HomePage() {
   const [showDuel, setShowDuel] = useState(false);
   const [sysConfig, setSysConfig] = useState({});
   const [loadingDuel, setLoadingDuel] = useState(false);
+  
+  const soloConfigRef = useRef(null);
+
+  useEffect(() => {
+    if (showSolo && soloConfigRef.current) {
+      setTimeout(() => {
+        soloConfigRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [showSolo]);
 
   useEffect(() => {
     // Sinkronisasi data terbaru dari server agar stat di menu utama akurat
@@ -108,7 +118,7 @@ export default function HomePage() {
 
         {/* Solo Config */}
         {showSolo && (
-          <div className="solo-config animate-fade-in">
+          <div className="solo-config animate-fade-in" ref={soloConfigRef}>
             <h3 style={{ marginBottom: 12 }}>Konfigurasi Solo</h3>
             <div className="config-section">
               <span className="input-label">Operasi</span>

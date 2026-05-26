@@ -186,4 +186,4 @@ class AnswerSubmission(BaseModel):
     """Submission jawaban dari pemain di dalam room."""
     room_id: str = Field(..., description="Kode room")
     question_index: int = Field(..., ge=0, description="Index soal yang dijawab")
-    answer: int = Field(..., description="Jawaban pemain")
+    answer: Optional[int] = Field(default=None, description="Jawaban pemain (bisa null jika di-skip)")
