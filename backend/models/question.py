@@ -77,3 +77,26 @@ class QuestionStack(BaseModel):
     op: MathOperation = Field(..., description="Operasi yang digunakan")
     diff: Difficulty = Field(..., description="Difficulty yang digunakan")
     count: int = Field(..., description="Jumlah soal dalam stack")
+
+
+class PublicMathQuestion(BaseModel):
+    """
+    Satu soal matematika yang aman untuk dikirim ke frontend (tanpa jawaban).
+    """
+    num1: int = Field(..., description="Angka pertama")
+    num2: int = Field(..., description="Angka kedua")
+    op: MathOperation = Field(..., description="Operasi: add, sub, mul, div")
+    
+    model_config = {"use_enum_values": True}
+
+class PublicQuestionStack(BaseModel):
+    """
+    Kumpulan soal yang aman untuk dikirim ke frontend.
+    """
+    questions: List[PublicMathQuestion] = Field(
+        ...,
+        description="Array soal tanpa jawaban"
+    )
+    op: MathOperation = Field(..., description="Operasi yang digunakan")
+    diff: Difficulty = Field(..., description="Difficulty yang digunakan")
+    count: int = Field(..., description="Jumlah soal dalam stack")

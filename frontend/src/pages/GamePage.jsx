@@ -32,6 +32,7 @@ export default function GamePage() {
   const [waitingOpponent, setWaitingOpponent] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [roomData, setRoomData] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef(null);
 
   const onTimerExpire = useCallback(() => {
@@ -143,16 +144,36 @@ export default function GamePage() {
   const maxStreakRef = useRef(maxStreak);
   useEffect(() => { maxStreakRef.current = maxStreak; }, [maxStreak]);
 
-  const submitAnswer = () => {
-    if (phase !== 'playing' || currentIdx >= questions.length) return;
+  const submitAnswer = async () => {
+    if (phase !== 'playing' || currentIdx >= questions.length || isSubmitting) return;
     const q = questions[currentIdx];
     const userAns = inputVal.trim() === '' ? null : parseInt(inputVal);
+    
+    setIsSubmitting(true);
+    let isCorrect = false;
+    let correctAnswer = null;
+
+    if (mode === 'multi' && roomId) {
+      try {
+        const res = await apiSubmitAnswer(roomId, { room_id: roomId, question_index: currentIdx, answer: userAns });
+        isCorrect = res.is_correct;
+        correctAnswer = res.correct_answer;
+      } catch (err) {
+        console.error("Gagal submit jawaban", err);
+        setIsSubmitting(false);
+        return;
+      }
+    } else {
+      // Solo Mode (Option 3): Use client-side answer validation
+      isCorrect = userAns === q.answer;
+      correctAnswer = q.answer;
+    }
+
     const newAnswers = [...answers];
     newAnswers[currentIdx] = userAns;
     setAnswers(newAnswers);
     answersRef.current = newAnswers;
 
-    const isCorrect = userAns === q.answer;
     if (isCorrect) {
       setStreak(s => {
         const ns = s + 1;
@@ -162,15 +183,12 @@ export default function GamePage() {
       showFeedback('correct');
     } else {
       setStreak(0);
-      showFeedback('wrong', q.answer);
-    }
-
-    // Submit to backend asynchronously if multiplayer
-    if (mode === 'multi' && roomId) {
-      apiSubmitAnswer(roomId, { room_id: roomId, question_index: currentIdx, answer: userAns }).catch(() => {});
+      showFeedback('wrong', correctAnswer);
     }
 
     setInputVal('');
+    setIsSubmitting(false);
+    
     if (currentIdx + 1 >= questions.length) {
       setTimeout(() => finishGame(newAnswers), 300);
     } else {
@@ -390,18 +408,18 @@ export default function GamePage() {
         <div className="answer-area">
           <input ref={inputRef} className="answer-input" type="text" inputMode="none" pattern="[0-9]*"
             value={inputVal} onChange={e => setInputVal(e.target.value.replace(/[^0-9-]/g, ''))}
-            onKeyDown={handleKeyDown} placeholder="?" autoComplete="off" id="answer-input" />
+            onKeyDown={handleKeyDown} placeholder={isSubmitting ? "..." : "?"} autoComplete="off" id="answer-input" disabled={isSubmitting} />
           <span className="game-hint">tekan ENTER untuk jawab · kosongkan untuk skip</span>
         </div>
 
         {/* Mobile Numpad */}
         <div className="mobile-numpad">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-            <button key={num} className="numpad-btn" onClick={() => setInputVal(v => v + num)}>{num}</button>
+            <button key={num} className="numpad-btn" onClick={() => setInputVal(v => v + num)} disabled={isSubmitting}>{num}</button>
           ))}
-          <button className="numpad-btn action" onClick={() => setInputVal(v => v.slice(0, -1))}>⌫</button>
-          <button className="numpad-btn" onClick={() => setInputVal(v => v + '0')}>0</button>
-          <button className="numpad-btn action enter" onClick={submitAnswer}>↵</button>
+          <button className="numpad-btn action" onClick={() => setInputVal(v => v.slice(0, -1))} disabled={isSubmitting}>⌫</button>
+          <button className="numpad-btn" onClick={() => setInputVal(v => v + '0')} disabled={isSubmitting}>0</button>
+          <button className="numpad-btn action enter" onClick={submitAnswer} disabled={isSubmitting}>↵</button>
         </div>
       </div>
 

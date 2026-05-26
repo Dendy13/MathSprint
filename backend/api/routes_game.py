@@ -32,10 +32,12 @@ from models.question import (
     Difficulty,
     MathOperation,
     MathQuestion,
+    PublicMathQuestion,
     QuestionStack,
     QuestionStackRequest,
 )
 from models.room import (
+    AnswerResponse,
     AnswerSubmission,
     Room,
     RoomCreate,
@@ -222,7 +224,7 @@ async def get_room_info(
 
 @router.get(
     "/room/{room_id}/questions",
-    response_model=list[MathQuestion],
+    response_model=list[PublicMathQuestion],
     summary="Ambil soal room",
     description="Ambil seluruh soal untuk room ini (hanya jika game sudah dimulai).",
 )
@@ -250,7 +252,12 @@ async def get_room_questions(
             detail="Game belum dimulai, soal masih dirahasiakan.",
         )
         
-    return room.question_stack
+    # Convert to PublicMathQuestion to hide answers
+    public_stack = [
+        PublicMathQuestion(num1=q.num1, num2=q.num2, op=q.op)
+        for q in room.question_stack
+    ]
+    return public_stack
 
 
 @router.post(
@@ -276,7 +283,7 @@ async def start_room_game(
 
 @router.post(
     "/room/{room_id}/answer",
-    response_model=RoomPlayer,
+    response_model=AnswerResponse,
     summary="Submit jawaban",
     description="Submit jawaban untuk satu soal di room.",
 )
@@ -287,13 +294,17 @@ async def submit_room_answer(
 ):
     """Submit jawaban soal di room."""
     try:
-        player = submit_answer(
+        player, is_correct, correct_answer = submit_answer(
             room_id=room_id.upper(),
             player_uid=uid,
             question_index=data.question_index,
             answer=data.answer,
         )
-        return player
+        return AnswerResponse(
+            is_correct=is_correct,
+            correct_answer=correct_answer,
+            player=player
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

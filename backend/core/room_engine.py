@@ -141,9 +141,11 @@ def start_game(room_id: str, requester_uid: str) -> Room:
     return room
 
 
+from typing import Dict, Optional, Tuple
+
 def submit_answer(
     room_id: str, player_uid: str, question_index: int, answer: int,
-) -> RoomPlayer:
+) -> Tuple[RoomPlayer, bool, int]:
     """Submit jawaban pemain untuk satu soal di room Firestore."""
     room = get_room(room_id)
     if room is None:
@@ -160,7 +162,9 @@ def submit_answer(
         raise ValueError(f"Index soal tidak valid: {question_index}")
 
     correct_answer = room.question_stack[question_index].answer
-    if answer == correct_answer:
+    is_correct = (answer == correct_answer)
+    
+    if is_correct:
         player.correct_answers += 1
         player.score += 100
     else:
@@ -206,7 +210,7 @@ def submit_answer(
 
     db = get_firestore_client()
     db.collection("rooms").document(room_id).set(room.model_dump())
-    return player
+    return player, is_correct, correct_answer
 
 
 def get_room_summary(room: Room) -> RoomSummary:

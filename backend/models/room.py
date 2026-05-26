@@ -187,3 +187,9 @@ class AnswerSubmission(BaseModel):
     room_id: str = Field(..., description="Kode room")
     question_index: int = Field(..., ge=0, description="Index soal yang dijawab")
     answer: Optional[int] = Field(default=None, description="Jawaban pemain (bisa null jika di-skip)")
+
+class AnswerResponse(BaseModel):
+    """Response setelah pemain mengirim jawaban."""
+    is_correct: bool = Field(..., description="Apakah jawaban benar")
+    correct_answer: int = Field(..., description="Kunci jawaban yang benar")
+    player: RoomPlayer = Field(..., description="State pemain setelah update")
