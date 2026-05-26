@@ -135,7 +135,7 @@ export default function WaitingRoomPage() {
   }
 
   const isHost = user?.uid === room.host_uid;
-  const canStart = isHost && room.player_count >= 2;
+  const canStart = isHost && Object.keys(room.players || {}).length >= 2;
 
   // Get players array from the dictionary
   const playersList = room.players ? Object.values(room.players) : [];
