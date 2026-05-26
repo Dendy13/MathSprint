@@ -60,32 +60,20 @@ class MatchResult(BaseModel):
     """
     match_id: str = Field(..., description="Unique match identifier")
     room_id: str = Field(..., description="Room tempat match berlangsung")
-    winner_uid: Optional[str] = Field(
-        default=None,
-        description="UID pemenang (None jika seri)"
-    )
-    loser_uid: Optional[str] = Field(
-        default=None,
-        description="UID yang kalah (None jika seri)"
+    winners: list[str] = Field(
+        default_factory=list,
+        description="List UID pemenang (bisa >1 jika seri di posisi pertama)"
     )
     is_draw: bool = Field(
         default=False,
-        description="Apakah match berakhir seri"
+        description="Apakah match berakhir seri di posisi pertama"
     )
-    winner_calculation: EloCalculation = Field(
-        ...,
-        description="Detail Elo pemenang"
-    )
-    loser_calculation: EloCalculation = Field(
-        ...,
-        description="Detail Elo yang kalah"
+    calculations: list[EloCalculation] = Field(
+        default_factory=list,
+        description="Detail perhitungan Elo dan skor akhir semua pemain, diurutkan dari juara 1"
     )
     op: MathOperation = Field(..., description="Operasi yang dimainkan")
     diff: Difficulty = Field(..., description="Difficulty yang dimainkan")
-    score_diff: int = Field(
-        ...,
-        description="Selisih skor (winner_score - loser_score)"
-    )
     elo_wager: int = Field(
         ...,
         description="Base Elo yang dipertaruhkan"

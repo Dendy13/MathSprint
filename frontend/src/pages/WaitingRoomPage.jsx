@@ -140,34 +140,58 @@ export default function WaitingRoomPage() {
   // Get players array from the dictionary
   const playersList = room.players ? Object.values(room.players) : [];
   
-  // Render slots
-  const slots = [];
-  for (let i = 0; i < room.max_players; i++) {
-    const isFilled = i < playersList.length;
-    const player = isFilled ? playersList[i] : null;
-    const isHostPlayer = player?.uid === room.host_uid;
-    
-    slots.push(
-      <div key={i} className={`player-card ${isHostPlayer ? 'host' : ''}`}>
-        {isFilled ? (
-          <>
-            <div className="player-avatar">👤</div>
-            <div className="player-info">
-              <div className="player-name">
-                {player.display_name}
-                {isHostPlayer && <span className="host-badge">HOST</span>}
+  const isClassroomMode = room.max_players > 4;
+  
+  let slots = null;
+  
+  if (isClassroomMode) {
+    slots = (
+      <div className="classroom-players">
+        <p className="text-muted text-center mb-3">
+          {playersList.length} / {room.max_players} Murid Terhubung
+        </p>
+        <div className="pill-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+          {playersList.map((player, i) => {
+            const isHostPlayer = player.uid === room.host_uid;
+            return (
+              <div key={i} className={`badge ${isHostPlayer ? 'badge-accent' : 'badge-primary'}`} style={{ padding: '8px 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                👤 {player.display_name} {isHostPlayer && '👑'}
               </div>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>Siap Bertanding</div>
-            </div>
-          </>
-        ) : (
-          <div className="empty-slot" style={{ width: '100%' }}>
-            <span className="spinner" style={{ width: 20, height: 20 }} />
-            <span>Menunggu lawan bergabung...</span>
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
     );
+  } else {
+    const cardSlots = [];
+    for (let i = 0; i < room.max_players; i++) {
+      const isFilled = i < playersList.length;
+      const player = isFilled ? playersList[i] : null;
+      const isHostPlayer = player?.uid === room.host_uid;
+      
+      cardSlots.push(
+        <div key={i} className={`player-card ${isHostPlayer ? 'host' : ''}`}>
+          {isFilled ? (
+            <>
+              <div className="player-avatar">👤</div>
+              <div className="player-info">
+                <div className="player-name">
+                  {player.display_name}
+                  {isHostPlayer && <span className="host-badge">HOST</span>}
+                </div>
+                <div className="text-muted" style={{ fontSize: '0.85rem' }}>Siap Bertanding</div>
+              </div>
+            </>
+          ) : (
+            <div className="empty-slot" style={{ width: '100%' }}>
+              <span className="spinner" style={{ width: 20, height: 20 }} />
+              <span>Menunggu lawan bergabung...</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+    slots = <div className="players-list">{cardSlots}</div>;
   }
 
   return (
@@ -199,9 +223,7 @@ export default function WaitingRoomPage() {
         </>
       )}
 
-      <div className="players-list">
-        {slots}
-      </div>
+      {slots}
 
       <div className="room-actions" style={{ display: 'flex', gap: 16, marginTop: 32 }}>
         <button className="btn btn-outline" onClick={handleLeave} style={{ flex: 1 }}>

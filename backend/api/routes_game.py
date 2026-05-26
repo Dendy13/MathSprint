@@ -131,8 +131,15 @@ async def create_room(
             detail="Profil pemain tidak ditemukan. Pastikan sudah registrasi.",
         )
 
+    from models.player import AccountType
+    if data.max_players > 4 and host.account_type == AccountType.USER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hanya Guru atau Developer yang dapat membuat Room berskala besar (> 4 pemain).",
+        )
+
     try:
-        room = initialize_room(host=host, config=data.config)
+        room = initialize_room(host=host, config=data.config, is_matchmaking=False, max_players=data.max_players)
         return get_room_summary(room)
     except RuntimeError as e:
         raise HTTPException(

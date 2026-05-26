@@ -28,7 +28,7 @@ export default function GamePage() {
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [feedback, setFeedback] = useState(null);
-  const [opponent, setOpponent] = useState(null);
+  const [opponents, setOpponents] = useState([]);
   const [waitingOpponent, setWaitingOpponent] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [roomData, setRoomData] = useState(null);
@@ -90,10 +90,10 @@ export default function GamePage() {
       setRoomData(room);
 
       if (!isSpectator) {
-        // Find opponent
+        // Find opponents
         const players = Object.values(room.players || {});
-        const opp = players.find(p => p.uid !== user?.uid);
-        if (opp) setOpponent(opp);
+        const opps = players.filter(p => p.uid !== user?.uid);
+        setOpponents(opps);
 
         // Check if room is finished (meaning both finished)
         if (room.status === 'finished' && phase === 'finished') {
@@ -286,7 +286,7 @@ export default function GamePage() {
       <div className="page text-center" style={{ paddingTop: '20vh' }}>
         <span className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
         <h2 className="mt-4">Selesai!</h2>
-        <p className="text-muted">Menunggu {opponent?.display_name || 'lawan'} menyelesaikan soal...</p>
+        <p className="text-muted">Menunggu pemain lain menyelesaikan soal...</p>
       </div>
     );
   }
@@ -326,16 +326,38 @@ export default function GamePage() {
         <div className="timer-bar-fill" style={{ width: `${timer.percent}%`, background: timer.timerColor, transition: 'width 0.1s linear' }} />
       </div>
 
-      {/* Opponent Progress (Multiplayer only) */}
-      {mode === 'multi' && opponent && (
+      {/* Opponents Progress (Multiplayer only) */}
+      {mode === 'multi' && roomData && (
         <div className="opponent-progress" style={{ margin: '0 1rem 1rem 1rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span className="text-muted">{opponent.display_name}</span>
-            <span className="text-accent">{opponent.correct_answers} Benar</span>
-          </div>
-          <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', background: 'var(--accent)', width: `${(opponent.current_question_index / questions.length) * 100}%`, transition: 'width 0.3s ease' }} />
-          </div>
+          {roomData.max_players > 4 ? (
+            // Mini Leaderboard for Classroom Mode
+            <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px' }}>
+              {Object.values(roomData.players || {})
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 3)
+                .map((p, idx) => (
+                  <div key={p.uid} style={{ textAlign: 'center', flex: 1 }}>
+                    <div style={{ color: idx === 0 ? 'gold' : idx === 1 ? 'silver' : '#cd7f32' }}>
+                      #{idx + 1} {p.display_name}
+                    </div>
+                    <div className="text-accent">{p.score} pts</div>
+                  </div>
+              ))}
+            </div>
+          ) : (
+            // Individual bars for 1v1 / FFA up to 4
+            opponents.map(opp => (
+              <div key={opp.uid} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span className="text-muted">{opp.display_name}</span>
+                  <span className="text-accent">{opp.correct_answers} Benar</span>
+                </div>
+                <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: 'var(--accent)', width: `${(opp.current_question_index / questions.length) * 100}%`, transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 

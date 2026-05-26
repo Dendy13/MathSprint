@@ -37,7 +37,7 @@ def _get_unique_room_code(max_retries: int = 10) -> str:
     raise RuntimeError(f"Gagal generate kode room unik setelah {max_retries} percobaan.")
 
 
-def initialize_room(host: PlayerProfile, config: RoomConfig, is_matchmaking: bool = False) -> Room:
+def initialize_room(host: PlayerProfile, config: RoomConfig, is_matchmaking: bool = False, max_players: int = 2) -> Room:
     """
     Buat room baru di Firestore. Host otomatis menjadi pemain pertama.
     question_stack BELUM di-generate (di-generate saat start_game).
@@ -55,7 +55,7 @@ def initialize_room(host: PlayerProfile, config: RoomConfig, is_matchmaking: boo
         config=config,
         players={host.uid: host_player},
         question_stack=[],
-        max_players=2,
+        max_players=max_players,
         created_at=datetime.utcnow(),
         is_matchmaking=is_matchmaking,
     )
@@ -185,16 +185,18 @@ def submit_answer(
         room.match_result = result.model_dump(mode='json')
         
         # Update player profiles with new RP
-        for calc in [result.winner_calculation, result.loser_calculation]:
+        for calc in result.calculations:
             p_profile = get_player(calc.player_uid)
             if p_profile is not None:
                 updates = {
                     "current_rank_point": calc.new_rp,
                     "total_matches": p_profile.total_matches + 1,
                 }
-                if result.winner_uid == calc.player_uid:
+                
+                # Check if they are a winner (first place, or tied for first)
+                if calc.player_uid in result.winners:
                     updates["wins"] = p_profile.wins + 1
-                elif result.loser_uid == calc.player_uid:
+                elif calc.actual_score == 0.0 and len(result.calculations) <= 4:
                     updates["losses"] = p_profile.losses + 1
                 else:
                     updates["draws"] = p_profile.draws + 1

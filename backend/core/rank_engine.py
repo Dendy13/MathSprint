@@ -101,120 +101,130 @@ def process_match_result(
     room: Room,
 ) -> MatchResult:
     """
-    Proses hasil match setelah kedua pemain selesai.
+    Proses hasil match setelah semua pemain selesai.
 
-    Menghitung Elo Rating change untuk kedua pemain berdasarkan:
-      - Skor masing-masing
-      - RP saat ini
-      - Difficulty soal
-      - Elo wager yang dipertaruhkan
-      - Learning Protection (jika applicable)
-
-    Args:
-        room: Room yang sudah FINISHED dengan semua pemain selesai
-
-    Returns:
-        MatchResult dengan detail Elo calculation untuk kedua pemain
-
-    Raises:
-        ValueError: Room belum selesai atau jumlah pemain != 2
+    Menghitung Elo Rating change untuk pertandingan <= 4 pemain (FFA Elo),
+    dan sistem Positive Reinforcement (0 hukuman RP) untuk > 4 pemain (Classroom Mode).
     """
-    if len(room.players) != 2:
-        raise ValueError(f"Match resolution memerlukan 2 pemain, ada {len(room.players)}")
-
     players = list(room.players.values())
-    p1, p2 = players[0], players[1]
+    
+    # Sort players by score descending, then by finished_at timestamp ascending
+    players.sort(key=lambda p: (-p.score, p.finished_at.timestamp() if p.finished_at else 0))
 
-    # Determine winner/loser
-    is_draw = p1.score == p2.score
-    if is_draw:
-        winner, loser = p1, p2  # Arbitrary for draw
-        winner_actual, loser_actual = 0.5, 0.5
-    elif p1.score > p2.score:
-        winner, loser = p1, p2
-        winner_actual, loser_actual = 1.0, 0.0
+    max_score = len(room.question_stack) * 100
+    num_players = len(players)
+    
+    if num_players < 10:
+        winner_count = 3
+    elif num_players < 20:
+        winner_count = 5
     else:
-        winner, loser = p2, p1
-        winner_actual, loser_actual = 1.0, 0.0
+        winner_count = 10
+        
+    winners = []
+    calculations = []
+    
+    highest_score = players[0].score if players else 0
+    
+    for i, p in enumerate(players):
+        # Determine if they are tied for 1st place
+        if p.score == highest_score and highest_score > 0:
+            winners.append(p.uid)
+            
+        rp_change = 0
+        
+        # Positive reinforcement for Classroom Mode
+        if num_players > 4:
+            if i == 0:
+                rp_change = 50
+            elif i == 1:
+                rp_change = 30
+            elif i == 2:
+                rp_change = 20
+            elif i < winner_count:
+                rp_change = 10
+            else:
+                rp_change = 0
+                
+            expected_score_avg = 0.0
+            actual_score_avg = 0.0
+            diff_mult = DIFFICULTY_MULTIPLIER.get(room.config.diff, 1.0)
+            
+        else:
+            # Traditional FFA Elo for <= 4 players
+            total_rp_change = 0
+            total_expected = 0.0
+            total_actual = 0.0
+            diff_mult = 1.0
+            
+            for j, opp in enumerate(players):
+                if i == j: continue
+                
+                # 1v1 outcome
+                if p.score > opp.score:
+                    actual = 1.0
+                elif p.score == opp.score:
+                    actual = 0.5
+                else:
+                    actual = 0.0
+                    
+                score_diff = abs(p.score - opp.score)
+                rp_c, exp, d_mult = _calculate_rp_change(
+                    player_rp=p.rp_before,
+                    opponent_rp=opp.rp_before,
+                    actual_score=actual,
+                    difficulty=room.config.diff,
+                    score_diff=score_diff,
+                    max_possible_score=max_score,
+                    elo_wager=room.config.elo_wager,
+                )
+                
+                total_rp_change += rp_c
+                total_expected += exp
+                total_actual += actual
+                diff_mult = d_mult
+                
+            if num_players > 1:
+                rp_change = int(round(total_rp_change / (num_players - 1)))
+                expected_score_avg = total_expected / (num_players - 1)
+                actual_score_avg = total_actual / (num_players - 1)
+            else:
+                rp_change = 0
+                expected_score_avg = 0.0
+                actual_score_avg = 0.0
+                
+            # Learning protection for losers (not 1st place)
+            if i > 0 and rp_change < 0:
+                loser_streak = 0 # In production, fetch from profile
+                if loser_streak > LEARNING_PROTECTION_STREAK_THRESHOLD:
+                    rp_change = int(round(rp_change * LEARNING_PROTECTION_DISCOUNT))
 
-    score_diff = abs(winner.score - loser.score)
-    max_score = len(room.question_stack) * 100  # max possible score
+        new_rp = max(0, p.rp_before + rp_change)
+        
+        calc = EloCalculation(
+            player_uid=p.uid,
+            display_name=p.display_name,
+            old_rp=p.rp_before,
+            new_rp=new_rp,
+            rp_change=rp_change,
+            expected_score=round(expected_score_avg, 4),
+            actual_score=actual_score_avg,
+            difficulty_multiplier=diff_mult,
+            learning_protection_applied=False,
+            learning_streak_days=0,
+        )
+        calculations.append(calc)
 
-    # Calculate RP changes
-    winner_rp_change, winner_expected, diff_mult = _calculate_rp_change(
-        player_rp=winner.rp_before,
-        opponent_rp=loser.rp_before,
-        actual_score=winner_actual,
-        difficulty=room.config.diff,
-        score_diff=score_diff,
-        max_possible_score=max_score,
-        elo_wager=room.config.elo_wager,
-    )
-
-    loser_rp_change, loser_expected, _ = _calculate_rp_change(
-        player_rp=loser.rp_before,
-        opponent_rp=winner.rp_before,
-        actual_score=loser_actual,
-        difficulty=room.config.diff,
-        score_diff=score_diff,
-        max_possible_score=max_score,
-        elo_wager=room.config.elo_wager,
-    )
-
-    # Learning Protection check (placeholder — streak from profile)
-    # In production, fetch player profile to get learning_streak_days
-    loser_learning_protection = False
-    loser_streak = 0  # Will be fetched from Firestore in production
-
-    # Apply learning protection: if loser has streak > 3, discount loss by 30%
-    if not is_draw and loser_streak > LEARNING_PROTECTION_STREAK_THRESHOLD:
-        loser_rp_change = int(round(loser_rp_change * LEARNING_PROTECTION_DISCOUNT))
-        loser_learning_protection = True
-
-    # Ensure RP doesn't go below 0
-    winner_new_rp = max(0, winner.rp_before + winner_rp_change)
-    loser_new_rp = max(0, loser.rp_before + loser_rp_change)
-
-    # Build Elo calculation details
-    winner_calc = EloCalculation(
-        player_uid=winner.uid,
-        display_name=winner.display_name,
-        old_rp=winner.rp_before,
-        new_rp=winner_new_rp,
-        rp_change=winner_rp_change,
-        expected_score=round(winner_expected, 4),
-        actual_score=winner_actual,
-        difficulty_multiplier=diff_mult,
-        learning_protection_applied=False,
-        learning_streak_days=0,
-    )
-
-    loser_calc = EloCalculation(
-        player_uid=loser.uid,
-        display_name=loser.display_name,
-        old_rp=loser.rp_before,
-        new_rp=loser_new_rp,
-        rp_change=loser_rp_change,
-        expected_score=round(loser_expected, 4),
-        actual_score=loser_actual,
-        difficulty_multiplier=diff_mult,
-        learning_protection_applied=loser_learning_protection,
-        learning_streak_days=loser_streak,
-    )
-
-    match_id = str(uuid.uuid4())
+    is_draw = len(winners) > 1
 
     return MatchResult(
-        match_id=match_id,
+        match_id=str(uuid.uuid4()),
         room_id=room.room_id,
-        winner_uid=winner.uid if not is_draw else None,
-        loser_uid=loser.uid if not is_draw else None,
+        winners=winners,
         is_draw=is_draw,
-        winner_calculation=winner_calc,
-        loser_calculation=loser_calc,
+        calculations=calculations,
         op=room.config.op,
         diff=room.config.diff,
-        score_diff=score_diff,
         elo_wager=room.config.elo_wager,
         created_at=datetime.utcnow(),
     )

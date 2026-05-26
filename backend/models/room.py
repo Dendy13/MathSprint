@@ -127,7 +127,7 @@ class Room(BaseModel):
     max_players: int = Field(
         default=2,
         ge=2,
-        le=4,
+        le=40,
         description="Jumlah maksimal pemain di room"
     )
     created_at: datetime = Field(
@@ -157,7 +157,7 @@ class Room(BaseModel):
 class RoomCreate(BaseModel):
     """Request body untuk membuat room baru."""
     config: RoomConfig = Field(..., description="Konfigurasi room")
-    max_players: int = Field(default=2, ge=2, le=4)
+    max_players: int = Field(default=2, ge=2, le=40)
 
 
 class RoomJoin(BaseModel):

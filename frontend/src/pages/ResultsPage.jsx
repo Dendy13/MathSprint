@@ -46,8 +46,8 @@ export default function ResultsPage() {
 
   // Check for Rank Up
   useEffect(() => {
-    if (multiResult && user) {
-      const myCalc = multiResult?.winner_calculation?.player_uid === user?.uid ? multiResult?.winner_calculation : multiResult?.loser_calculation;
+    if (multiResult) {      // Check rank up
+      const myCalc = multiResult?.calculations?.find(c => c.player_uid === user?.uid);
       if (!myCalc) return;
       const oldTier = getRankTier(myCalc.old_rp);
       const newTier = getRankTier(myCalc.new_rp);
@@ -124,21 +124,15 @@ export default function ResultsPage() {
 
   // --- RENDER MULTIPLAYER RESULT ---
   if (mode === 'multi' && multiResult) {
-    const isWinner = multiResult.winner_uid === user?.uid;
+    const isWinner = multiResult.winners?.includes(user?.uid);
     const isDraw = multiResult.is_draw;
     
-    const myCalc = isWinner || isDraw ? multiResult.winner_calculation : multiResult.loser_calculation;
-    const oppCalc = isWinner || isDraw ? multiResult.loser_calculation : multiResult.winner_calculation;
-    
-    // Quick fix: if we are loser but draw, myCalc might be wrong if winner_calculation was assigned to us arbitrarily. 
-    // Let's explicitly match uid:
-    const actualMyCalc = multiResult?.winner_calculation?.player_uid === user?.uid ? multiResult?.winner_calculation : multiResult?.loser_calculation;
-    const actualOppCalc = multiResult?.winner_calculation?.player_uid === user?.uid ? multiResult?.loser_calculation : multiResult?.winner_calculation;
-
-    if (!actualMyCalc || !actualOppCalc) return null; // Defensive check
+    // Find my calculation
+    const myCalc = multiResult.calculations?.find(c => c.player_uid === user?.uid);
+    if (!myCalc) return null;
 
     return (
-      <div className="page page-centered" style={{ position: 'relative' }}>
+      <div className="page page-centered" style={{ position: 'relative', paddingTop: '2rem' }}>
         
         {showRankUp && rankUpData && (
           <div className="rank-up-overlay">
@@ -156,57 +150,51 @@ export default function ResultsPage() {
           </div>
         )}
 
-        <div className="results-card animate-slide-up" style={{ textAlign: 'center' }}>
+        <div className="results-card animate-slide-up" style={{ textAlign: 'center', width: '100%', maxWidth: '600px' }}>
           
           <h1 style={{ fontSize: '3rem', margin: '0 0 16px 0', color: isDraw ? 'var(--text)' : isWinner ? 'var(--green)' : 'var(--red)' }}>
-            {isDraw ? 'SERI! 🤝' : isWinner ? 'MENANG! 🎉' : 'KALAH! 💔'}
+            {isWinner ? 'MENANG! 🎉' : 'KALAH! 💔'}
           </h1>
           
           <p className="text-muted">{OP_LABELS[multiResult?.op] || 'Multiplayer'} • {DIFF_LABELS[multiResult?.diff] || 'Match'}</p>
 
-          <div style={{ display: 'flex', gap: 16, marginTop: 24 }}>
-            <div className={`result-player-card ${isWinner ? 'winner' : ''}`} style={{ flex: 1, textAlign: 'left', padding: 16, background: 'var(--surface)', borderRadius: 'var(--radius)', border: isWinner ? '1px solid var(--green)' : '1px solid var(--border)' }}>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>PEMAIN</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: isWinner ? 'var(--green)' : 'inherit', marginBottom: 8 }}>{actualMyCalc.display_name}</div>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>{actualMyCalc.old_rp} → {actualMyCalc.new_rp} RP</div>
-            </div>
-            <div className={`result-player-card ${!isWinner && !isDraw ? 'winner' : ''}`} style={{ flex: 1, textAlign: 'right', padding: 16, background: 'var(--surface)', borderRadius: 'var(--radius)', border: !isWinner && !isDraw ? '1px solid var(--green)' : '1px solid var(--border)' }}>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>LAWAN</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: !isWinner && !isDraw ? 'var(--green)' : 'inherit', marginBottom: 8 }}>{actualOppCalc.display_name}</div>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>{actualOppCalc.old_rp} → {actualOppCalc.new_rp} RP</div>
-            </div>
+          {/* LEADERBOARD */}
+          <div className="leaderboard" style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '40vh', overflowY: 'auto', paddingRight: '8px' }}>
+            {multiResult.calculations?.map((calc, index) => {
+              const isMe = calc.player_uid === user?.uid;
+              const isFirst = index === 0;
+              return (
+                <div key={calc.player_uid} className={`leaderboard-row ${isMe ? 'highlight' : ''}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: isMe ? 'var(--surface-highlight, rgba(255,255,255,0.05))' : 'var(--surface)', borderRadius: 'var(--radius)', border: isMe ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '30px', fontWeight: 'bold', color: isFirst ? 'gold' : index === 1 ? 'silver' : index === 2 ? '#cd7f32' : 'var(--muted)' }}>
+                      #{index + 1}
+                    </div>
+                    <div style={{ fontWeight: isMe ? 'bold' : 'normal' }}>
+                      {calc.display_name} {isFirst && '👑'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div className={calc.rp_change > 0 ? 'text-green' : calc.rp_change < 0 ? 'text-red' : 'text-muted'} style={{ fontWeight: 'bold' }}>
+                      {calc.rp_change > 0 ? `+${calc.rp_change} RP` : calc.rp_change < 0 ? `${calc.rp_change} RP` : '0 RP'}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      Total: {calc.new_rp} RP
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          <div className="rp-change-card" style={{ marginTop: 24 }}>
-            <div className="rp-side">
-              <span className="rp-label">Rank Point</span>
-              <span className="rp-value">{actualMyCalc.old_rp}</span>
-            </div>
-            <div className="rp-arrow">
-              <span className={`arrow ${actualMyCalc.rp_change > 0 ? 'up' : actualMyCalc.rp_change < 0 ? 'down' : 'neutral'}`}>
-                {actualMyCalc.rp_change > 0 ? '↗' : actualMyCalc.rp_change < 0 ? '↘' : '➡'}
-              </span>
-              <span className={`rp-diff ${actualMyCalc.rp_change > 0 ? 'text-green' : actualMyCalc.rp_change < 0 ? 'text-red' : 'text-muted'}`}>
-                {actualMyCalc.rp_change > 0 ? `+${actualMyCalc.rp_change}` : actualMyCalc.rp_change}
-              </span>
-            </div>
-            <div className="rp-side">
-              <span className="rp-label">Rank Baru</span>
-              <span className={`rp-value ${actualMyCalc.rp_change > 0 ? 'text-green' : actualMyCalc.rp_change < 0 ? 'text-red' : ''}`}>
-                {actualMyCalc.new_rp}
-              </span>
-            </div>
-          </div>
-
-          {actualMyCalc.learning_protection_applied && (
+          {myCalc.learning_protection_applied && (
             <div style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--accent)', background: 'rgba(56, 189, 248, 0.1)', padding: 8, borderRadius: 8 }}>
               🛡️ Learning Protection aktif: Penurunan RP didiskon 30% karena kekalahan beruntun.
             </div>
           )}
 
           <div className="results-actions" style={{ marginTop: 32 }}>
-            <button className="btn btn-primary" onClick={() => navigate('/room/create')} id="btn-play-again">
-              ⚔️ Main Lagi
+            <button className="btn btn-primary" onClick={() => navigate('/room')} id="btn-play-again">
+              ⚔️ Lobi Room
             </button>
             <button className="btn btn-ghost" onClick={() => navigate('/')} id="btn-home">
               🔙 Beranda
