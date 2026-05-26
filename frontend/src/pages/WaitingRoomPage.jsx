@@ -36,7 +36,7 @@ export default function WaitingRoomPage() {
       const isSpectator = data.spectators && data.spectators[user?.uid];
       
       if (user && data.host_uid !== user.uid && !isPlayer && !isSpectator && !hasAttemptedJoin) {
-        if (user.account_type === 'teacher') {
+        if (user.account_type === 'teacher' || user.account_type === 'developer') {
           setRolePrompt(true);
           setRoom(data);
           return;

@@ -274,7 +274,7 @@ export default function GamePage() {
           {countdown > 0 ? countdown : 'GO!'}
         </div>
         <p className="text-muted" style={{ marginTop: 16 }}>
-          {questions.length || totalQ} soal {OP_LABELS[op]} ({DIFF_LABELS[diff]}) dalam {timeLimit} detik
+          {mode === 'solo' ? 'Mode Tanpa Batas' : `${questions.length || totalQ} soal`} • {OP_LABELS[op]} ({DIFF_LABELS[diff]}) dalam {timeLimit} detik
         </p>
       </div>
     );
@@ -307,7 +307,9 @@ export default function GamePage() {
       {/* Top Bar */}
       <div className="game-topbar">
         <div className="topbar-left">
-          <span className="badge badge-accent">Soal {currentIdx + 1}/{questions.length}</span>
+          <span className="badge badge-accent">
+            {mode === 'solo' ? `Skor: ${currentIdx}` : `Soal ${currentIdx + 1}/${questions.length}`}
+          </span>
         </div>
         <div className="topbar-center">
           <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--muted)' }}>
