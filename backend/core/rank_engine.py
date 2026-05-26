@@ -61,7 +61,6 @@ def _calculate_rp_change(
     difficulty: Difficulty,
     score_diff: int,
     max_possible_score: int,
-    elo_wager: int,
 ) -> tuple[int, float, float]:
     """
     Hitung perubahan RP untuk satu pemain.
@@ -73,7 +72,6 @@ def _calculate_rp_change(
         difficulty: Tingkat kesulitan
         score_diff: Selisih skor (absolute)
         max_possible_score: Skor maksimal yang mungkin
-        elo_wager: Base Elo yang dipertaruhkan
 
     Returns:
         Tuple (rp_change, expected_score, diff_multiplier)
@@ -87,8 +85,8 @@ def _calculate_rp_change(
     else:
         score_factor = diff_mult
 
-    # Wager multiplier: berapa banyak RP yang dipertaruhkan
-    wager_mult = elo_wager / 25.0  # Normalize to base 25
+    # Wager multiplier tidak ada lagi, diset tetap ke 1.0
+    wager_mult = 1.0
 
     # RP change calculation
     rp_change_raw = K_FACTOR * (actual_score - expected) * score_factor * wager_mult
@@ -176,7 +174,6 @@ def process_match_result(
                     difficulty=room.config.diff,
                     score_diff=score_diff,
                     max_possible_score=max_score,
-                    elo_wager=room.config.elo_wager,
                 )
                 
                 total_rp_change += rp_c
@@ -198,6 +195,10 @@ def process_match_result(
                 loser_streak = 0 # In production, fetch from profile
                 if loser_streak > LEARNING_PROTECTION_STREAK_THRESHOLD:
                     rp_change = int(round(rp_change * LEARNING_PROTECTION_DISCOUNT))
+
+        # Zero out RP changes if this is an unranked room (User hosted)
+        if not room.is_ranked:
+            rp_change = 0
 
         new_rp = max(0, p.rp_before + rp_change)
         
@@ -225,7 +226,6 @@ def process_match_result(
         calculations=calculations,
         op=room.config.op,
         diff=room.config.diff,
-        elo_wager=room.config.elo_wager,
         created_at=datetime.utcnow(),
     )
 

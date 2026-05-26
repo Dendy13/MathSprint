@@ -37,7 +37,7 @@ def _get_unique_room_code(max_retries: int = 10) -> str:
     raise RuntimeError(f"Gagal generate kode room unik setelah {max_retries} percobaan.")
 
 
-def initialize_room(host: PlayerProfile, config: RoomConfig, is_matchmaking: bool = False, max_players: int = 2) -> Room:
+def initialize_room(host: PlayerProfile, config: RoomConfig, is_matchmaking: bool = False, max_players: int = 2, is_ranked: bool = True) -> Room:
     """
     Buat room baru di Firestore. Host otomatis menjadi pemain pertama.
     question_stack BELUM di-generate (di-generate saat start_game).
@@ -58,6 +58,7 @@ def initialize_room(host: PlayerProfile, config: RoomConfig, is_matchmaking: boo
         max_players=max_players,
         created_at=datetime.utcnow(),
         is_matchmaking=is_matchmaking,
+        is_ranked=is_ranked,
     )
     
     db = get_firestore_client()

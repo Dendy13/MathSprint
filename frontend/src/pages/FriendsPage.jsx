@@ -82,7 +82,7 @@ export default function FriendsPage() {
     try {
       // 1. Create Room (default config for duel)
       const room = await createRoom({
-        config: { op: 'add', diff: 'medium', question_limit: 10, elo_wager: 10, time_limit_seconds: 60 }
+        config: { op: 'add', diff: 'medium', question_limit: 10, time_limit_seconds: 60 }
       });
       // 2. Send Invite
       await inviteFriendToRoom({ to_uid: friendUid, room_id: room.room_id });

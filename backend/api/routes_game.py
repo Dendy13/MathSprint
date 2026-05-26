@@ -132,14 +132,37 @@ async def create_room(
         )
 
     from models.player import AccountType
-    if data.max_players > 4 and host.account_type == AccountType.USER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Hanya Guru atau Developer yang dapat membuat Room berskala besar (> 4 pemain).",
-        )
+    from services.firestore_service import update_player
+    
+    is_ranked = True
+    
+    if host.account_type == AccountType.USER:
+        if data.max_players > 4:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Hanya Guru atau Developer yang dapat membuat Room berskala besar (> 4 pemain).",
+            )
+            
+        if host.current_rank_point < 20:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Saldo RP tidak cukup. Pembuatan Custom Room membutuhkan 20 RP.",
+            )
+            
+        # Potong 20 RP
+        new_rp = host.current_rank_point - 20
+        update_success = await update_player(uid, {"current_rank_point": new_rp})
+        if not update_success:
+             raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gagal memproses pembayaran RP.",
+            )
+            
+        host.current_rank_point = new_rp
+        is_ranked = False
 
     try:
-        room = initialize_room(host=host, config=data.config, is_matchmaking=False, max_players=data.max_players)
+        room = initialize_room(host=host, config=data.config, is_matchmaking=False, max_players=data.max_players, is_ranked=is_ranked)
         return get_room_summary(room)
     except RuntimeError as e:
         raise HTTPException(

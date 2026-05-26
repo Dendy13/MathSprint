@@ -74,10 +74,6 @@ class MatchResult(BaseModel):
     )
     op: MathOperation = Field(..., description="Operasi yang dimainkan")
     diff: Difficulty = Field(..., description="Difficulty yang dimainkan")
-    elo_wager: int = Field(
-        ...,
-        description="Base Elo yang dipertaruhkan"
-    )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         description="Waktu match selesai"

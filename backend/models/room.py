@@ -29,21 +29,12 @@ class RoomConfig(BaseModel):
     Termasuk pengaturan Elo wager yang bisa disesuaikan.
     """
     op: MathOperation = Field(..., description="Operasi soal dalam room")
-    diff: Difficulty = Field(..., description="Tingkat kesulitan soal")
+    diff: Difficulty = Field(..., description="Difficulty yang dipilih")
     question_limit: int = Field(
         default=10,
         ge=5,
         le=50,
         description="Jumlah soal per sesi"
-    )
-    elo_wager: int = Field(
-        default=25,
-        ge=5,
-        le=100,
-        description=(
-            "Jumlah base Elo/Rank Point yang dipertaruhkan. "
-            "Digunakan sebagai multiplier dalam kalkulasi Elo."
-        )
     )
     time_limit_seconds: int = Field(
         default=60,
@@ -107,6 +98,10 @@ class Room(BaseModel):
     status: RoomStatus = Field(
         default=RoomStatus.WAITING,
         description="Status room saat ini"
+    )
+    is_ranked: bool = Field(
+        default=True,
+        description="Apakah room ini memberikan RP (True jika buatan Guru/Dev, False jika buatan Player biasa)"
     )
     config: RoomConfig = Field(..., description="Konfigurasi permainan")
     players: Dict[str, RoomPlayer] = Field(
