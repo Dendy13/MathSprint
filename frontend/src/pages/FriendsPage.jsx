@@ -18,6 +18,14 @@ export default function FriendsPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
 
+  const getErrMsg = (e) => {
+    if (e?.detail) {
+      if (typeof e.detail === 'string') return e.detail;
+      if (Array.isArray(e.detail)) return e.detail.map(d => d.msg).join(', ');
+    }
+    return e?.message || String(e);
+  };
+
   useEffect(() => { loadData(); }, []);
 
   // Real-time listener for duel invites
@@ -52,19 +60,19 @@ export default function FriendsPage() {
       await sendFriendRequest(searchUid.trim());
       setMsg('Friend request terkirim!');
       setSearchUid('');
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(getErrMsg(e)); }
   };
 
   const handleRespond = async (id, action) => {
     try {
       await respondFriendRequest(id, action);
       loadData();
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(getErrMsg(e)); }
   };
 
   const handleRemove = async (uid) => {
     if (!confirm('Hapus teman ini?')) return;
-    try { await removeFriend(uid); loadData(); } catch (e) { setMsg(e.message); }
+    try { await removeFriend(uid); loadData(); } catch (e) { setMsg(getErrMsg(e)); }
   };
 
   const navigate = useNavigate();
@@ -81,7 +89,7 @@ export default function FriendsPage() {
       // 3. Navigate
       navigate(`/room/${room.room_id}`);
     } catch (e) {
-      setMsg(e.message);
+      setMsg(getErrMsg(e));
       setLoading(false);
     }
   };
@@ -92,7 +100,7 @@ export default function FriendsPage() {
       await deleteRoomInvite(roomId);
       navigate(`/room/${roomId}`);
     } catch (e) {
-      setMsg(e.message);
+      setMsg(getErrMsg(e));
       setLoading(false);
     }
   };

@@ -25,6 +25,7 @@ from models.friend import (
     FriendRequestRespond,
     FriendRequestStatus,
     RoomInvite,
+    RoomInviteCreate,
 )
 from services.auth_service import get_current_uid
 
@@ -234,7 +235,7 @@ async def remove_friend(
     description="Kirim undangan room ke teman.",
 )
 async def invite_friend_to_room(
-    invite: RoomInvite,
+    invite: RoomInviteCreate,
     uid: str = Depends(get_current_uid),
 ):
     """Undang teman ke room. Teman harus ada di friend list."""

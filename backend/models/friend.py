@@ -94,3 +94,13 @@ class RoomInvite(BaseModel):
         default_factory=datetime.utcnow,
         description="Waktu undangan dikirim"
     )
+
+class RoomInviteCreate(BaseModel):
+    """Request body untuk mengirim undangan room."""
+    to_uid: str = Field(..., description="UID penerima undangan")
+    room_id: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        description="Kode room yang diundang"
+    )
